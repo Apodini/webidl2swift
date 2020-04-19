@@ -8,7 +8,7 @@ let package = Package(
     platforms: [.macOS(.v10_14)],
     products: [
         // Products define the executables and libraries produced by a package, and make them visible to other packages.
-        .executable(name: "webidl2swift", targets: ["webidl2swift"])
+        .executable(name: "webidl2swift", targets: ["webidl2swift", ]),
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
@@ -26,7 +26,21 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "SwiftFormat", package: "swift-format"),
                 .product(name: "SwiftSyntax", package: "SwiftSyntax"),
-        ]),
+                .target(name: "WebIDL"),
+        ],
+            linkerSettings: [
+            .unsafeFlags([
+                // Fix for missing rpath for lib_InternalSwiftSyntaxParser.dylib when building from within Xcode.
+                // lib_InternalSwiftSyntaxParser.dylib is linked by SwiftSyntax.
+                "-Xlinker",  "-rpath", "-Xlinker", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/"
+            ])
+            ]
+        ),
+        .target(
+            name: "WebIDL",
+            dependencies: [],
+            path: "Sources/WebIDL"
+        ),
         .testTarget(
             name: "webidl2swiftTests",
             dependencies: ["webidl2swift"]),
