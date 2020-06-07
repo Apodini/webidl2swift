@@ -23,10 +23,7 @@ let package = Package(
         .target(
             name: "webidl2swift",
             dependencies: [
-                .product(name: "ArgumentParser", package: "swift-argument-parser"),
-                .product(name: "SwiftFormat", package: "swift-format"),
-                .product(name: "SwiftSyntax", package: "SwiftSyntax"),
-                .target(name: "WebIDL"),
+                .target(name: "Commands"),
         ],
             linkerSettings: [
             .unsafeFlags([
@@ -41,8 +38,36 @@ let package = Package(
             dependencies: [],
             path: "Sources/WebIDL"
         ),
+        .target(
+            name: "Commands",
+            dependencies: [
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
+                .product(name: "SwiftFormat", package: "swift-format"),
+                .product(name: "SwiftSyntax", package: "SwiftSyntax"),
+                .target(name: "WebIDL"),
+            ],
+            // Ran into linker issues: GenerateCode was not usable in tests when it is declared in webidl2swift
+            path: "Sources/Commands",
+            linkerSettings: [
+                .unsafeFlags([
+                    // Fix for missing rpath for lib_InternalSwiftSyntaxParser.dylib when building from within Xcode.
+                    // lib_InternalSwiftSyntaxParser.dylib is linked by SwiftSyntax.
+                    "-Xlinker",  "-rpath", "-Xlinker", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/"
+                ])
+            ]
+        ),
         .testTarget(
             name: "webidl2swiftTests",
-            dependencies: ["webidl2swift"]),
+            dependencies: [
+                "webidl2swift",
+            ],
+            linkerSettings: [
+                .unsafeFlags([
+                    // Fix for missing rpath for lib_InternalSwiftSyntaxParser.dylib when building from within Xcode.
+                    // lib_InternalSwiftSyntaxParser.dylib is linked by SwiftSyntax.
+                    "-Xlinker",  "-rpath", "-Xlinker", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/"
+                ])
+            ]
+        ),
     ]
 )
