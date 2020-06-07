@@ -1,6 +1,3 @@
-//
-//  Created by Manuel Burghard on 19.04.20.
-//
 
 import Foundation
 
@@ -11,6 +8,10 @@ protocol MemberNode: class {
     var isSubscript: Bool { get }
     var isProperty: Bool { get }
     var needsInitialization: Bool { get }
+    var isStatic: Bool { get }
+
+    var adoptedProtocols: [String] { get }
+    var typealiases: [String] { get }
 
     func swiftDeclarations(inContext: MemberNodeContext) -> [String]
     func swiftImplementations(inContext: MemberNodeContext) -> [String]

@@ -1,6 +1,3 @@
-//
-//  Created by Manuel Burghard on 19.04.20.
-//
 
 import Foundation
 

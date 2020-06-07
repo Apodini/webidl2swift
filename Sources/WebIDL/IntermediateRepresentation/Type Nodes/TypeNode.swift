@@ -1,6 +1,3 @@
-//
-//  Created by Manuel Burghard on 19.04.20.
-//
 
 import Foundation
 
@@ -14,6 +11,7 @@ public protocol TypeNode: class {
     var isEnum: Bool { get }
     var isProtocol: Bool { get }
     var isClass: Bool { get }
+    var isNamespace: Bool { get }
 
     var isRecord: Bool { get }
 
@@ -25,6 +23,8 @@ public protocol TypeNode: class {
     var typeErasedSwiftType: String { get }
 
     var numberOfClosureArguments: Int { get }
+
+    var arrayElementSwiftTypeName: String? {get}
 }
 
 extension TypeNode {
