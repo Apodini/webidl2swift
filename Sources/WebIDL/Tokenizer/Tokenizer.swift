@@ -53,6 +53,7 @@ enum State {
     case identifier
     case integerLiteral
     case hexLiteral
+    case decimalLiteral
     case stringLiteral
     case escapedChar
     case startOfComment
@@ -193,6 +194,14 @@ public struct Tokenizer {
             integers.append(integer)
         }
 
+        func appendDecimalLiteral() {
+            guard let double = Double(buffer) else {
+                return
+            }
+            tokens.append(.decimal)
+            decimals.append(double)
+        }
+
         func appendIdentifier() {
             if let symbol = Terminal(rawValue: buffer) {
                 tokens.append(.terminal(symbol))
@@ -323,6 +332,11 @@ public struct Tokenizer {
                 tokens.append(.terminal(.comma))
                 reset()
 
+            case (.decimalLiteral, ","):
+                appendDecimalLiteral()
+                tokens.append(.terminal(.comma))
+                reset()
+
             case (.regular, ","):
                 tokens.append(.terminal(.comma))
 
@@ -336,10 +350,20 @@ public struct Tokenizer {
                 tokens.append(.terminal(.semicolon))
                 reset()
 
+            case (.integerLiteral, "."):
+                state = .decimalLiteral
+                buffer.append(".")
+
             case (.hexLiteral, ";"):
                 appendHexLiteral()
                 tokens.append(.terminal(.semicolon))
                 reset()
+
+            case (.decimalLiteral, ";"):
+                appendDecimalLiteral()
+                tokens.append(.terminal(.semicolon))
+                reset()
+
 
             case (.regular, ";"):
                 tokens.append(.terminal(.semicolon))
@@ -386,12 +410,29 @@ public struct Tokenizer {
                 state = .integerLiteral
                 buffer.append(char)
 
+            case (.decimalLiteral, let char) where char.isNumber:
+                buffer.append(char)
+
+            case (.decimalLiteral, "e") where !buffer.contains("e"),
+                 (.decimalLiteral, "E") where !buffer.contains("e"),
+                (.integerLiteral, "e") where !buffer.contains("e"),
+                (.integerLiteral, "E") where !buffer.contains("e"):
+                state = .decimalLiteral
+                buffer.append("e")
+                
+            case (.decimalLiteral, "+") where buffer.last == "e":
+                buffer.append("+")
+
             case (.integerLiteral, let char) where char.isWhitespace || char.isNewline:
                 appendIntegerLiteral()
                 reset()
 
             case (.hexLiteral, let char) where char.isWhitespace || char.isNewline:
                 appendHexLiteral()
+                reset()
+
+            case (.decimalLiteral, let char) where char.isWhitespace || char.isNewline:
+                appendDecimalLiteral()
                 reset()
 
             case (.regular, "/"):
@@ -436,9 +477,8 @@ public struct Tokenizer {
             case (.multilineComment, let char):
                  buffer.append(char)
 
-            case (.regular, let char) where char.isLetter:
+            case (.regular, let char) where char.isLetter || "_" == char:
                 state = .identifier
-                buffer = ""
                 buffer.append(char)
 
             case (.identifier, let char) where char.isWhitespace || char.isNewline:
@@ -446,7 +486,7 @@ public struct Tokenizer {
                 appendIdentifier()
                 buffer = ""
 
-            case (.identifier, let char) where char.isLetter || char == "_" || char.isNumber:
+            case (.identifier, let char) where char.isLetter || ["_", "-"].contains(char) || char.isNumber:
                 buffer.append(char)
 
             case (.regular, "\""):
@@ -482,6 +522,8 @@ public struct Tokenizer {
             appendIntegerLiteral()
         case .hexLiteral:
             appendHexLiteral()
+        case .decimalLiteral:
+            appendDecimalLiteral()
         case .stringLiteral:
             break
         case .escapedChar:
