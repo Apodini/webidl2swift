@@ -90,9 +90,9 @@ class SubscriptNode: MemberNode, Equatable {
             declaration += """
             set {
                 if let newValue = newValue  {
-                \(lookup) = newValue.jsValue()
+                    \(lookup) = newValue.jsValue()
                 } else {
-                \(lookup) = .null
+                    \(lookup) = .null
                 }
             }
             """
@@ -101,7 +101,7 @@ class SubscriptNode: MemberNode, Equatable {
 
             set {
                 if let newValue = newValue  {
-                \(lookup) = newValue.jsValue()
+                    \(lookup) = newValue.jsValue()
                 }
             }
             """

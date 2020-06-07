@@ -38,7 +38,7 @@ class ConstructorNode: MemberNode, Equatable {
             for parameter in parameters {
 
                 let dataTypeNode = parameter.dataType.node!
-                let type: String
+                var type: String
                 if dataTypeNode.isProtocol {
                     if dataTypeNode.isOptional {
                         type = "\(dataTypeNode.nonOptionalTypeName)Type?"
@@ -52,7 +52,28 @@ class ConstructorNode: MemberNode, Equatable {
                 } else {
                     type = dataTypeNode.swiftTypeName
                 }
-                parameterDeclarations.append("\(parameter.label): \(type)")
+
+                if parameter.isVariadic {
+                    type += "..."
+                }
+
+                if let defaultValue = parameter.defaultValue {
+                    let value: String
+                    if let enumNode = defaultValue.dataType.node as? EnumerationWithRawValueNode {
+                        let trimmedDefaultValue = defaultValue.value.trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+                        if enumNode.cases.contains(trimmedDefaultValue) {
+                            value = "." + String(trimmedDefaultValue.first!.lowercased() + trimmedDefaultValue.dropFirst())
+                        } else {
+                            fatalError()
+                        }
+                    } else {
+                        value = defaultValue.value
+                    }
+
+                    parameterDeclarations.append("\(parameter.label): \(type) = \(value)")
+                } else {
+                    parameterDeclarations.append("\(parameter.label): \(type)")
+                }
             }
 
             if !typeConstraints.isEmpty {
@@ -97,7 +118,7 @@ class ConstructorNode: MemberNode, Equatable {
                 }
                 declaration += """
                  {
-                    self.init(objectRef: JSObjectRef.global.\(className).function!.new(\(passedParameters.joined(separator: ", "))))
+                    self.init(objectRef: \(className).classRef.new(\(passedParameters.joined(separator: ", "))))
                 }
                 """
             }

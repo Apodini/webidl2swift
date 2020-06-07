@@ -56,26 +56,30 @@ class DictionaryNode: TypeNode, Equatable {
         let cases = self.cases
 
         return """
-        public struct \(swiftTypeName): ExpressibleByDictionaryLiteral, JSValueEncodable, JSValueDecodable {
+        public struct \(swiftTypeName): ExpressibleByDictionaryLiteral, JSValueCodable {
+
+            public static func canDecode(from jsValue: JSValue) -> Bool {
+                return jsValue.isObject
+            }
 
             public enum Key: String, Hashable {
 
                 case \(cases.map(escapedName).joined(separator: ", "))
             }
 
-            public typealias Value = AnyJSValueConvertible
+            public typealias Value = AnyJSValueCodable
 
-            private let dictionary: [String : AnyJSValueConvertible]
+            private let dictionary: [String : AnyJSValueCodable]
 
             public init(uniqueKeysWithValues elements: [(Key, Value)]) {
                 self.dictionary = Dictionary(uniqueKeysWithValues: elements.map({ ($0.0.rawValue, $0.1) }))
             }
 
-            public init(dictionaryLiteral elements: (Key, AnyJSValueConvertible)...) {
+            public init(dictionaryLiteral elements: (Key, AnyJSValueCodable)...) {
                 self.dictionary = Dictionary(uniqueKeysWithValues: elements.map({ ($0.0.rawValue, $0.1) }))
             }
 
-            subscript(_ key: Key) -> AnyJSValueConvertible? {
+            subscript(_ key: Key) -> AnyJSValueCodable? {
                 dictionary[key.rawValue]
             }
 
@@ -89,6 +93,10 @@ class DictionaryNode: TypeNode, Equatable {
             }
         }
         """
+    }
+
+    func typeCheck(withArgument argument: String) -> String {
+        return "case .object = \(argument)"
     }
 
     static func == (lhs: DictionaryNode, rhs: DictionaryNode) -> Bool {

@@ -12,6 +12,17 @@ public class IRGenerator {
 
         // https://streams.spec.whatwg.org/#rs-class
         ir.registerBasicType(withTypeName: "ReadableStream")
+        ir.registerBasicArrayType(withTypeName: "Float64Array", scalarType: "Double")
+        ir.registerBasicArrayType(withTypeName: "Float32Array", scalarType: "Float")
+        ir.registerBasicArrayType(withTypeName: "Uint32Array", scalarType: "UInt32")
+        ir.registerBasicArrayType(withTypeName: "Uint16Array", scalarType: "UInt16")
+        ir.registerBasicArrayType(withTypeName: "Uint8Array", scalarType: "UInt8")
+        ir.registerBasicArrayType(withTypeName: "Uint8ClampedArray", scalarType: "UInt8")
+        ir.registerBasicArrayType(withTypeName: "Int32Array", scalarType: "Int32")
+        ir.registerBasicArrayType(withTypeName: "Int16Array", scalarType: "Int16")
+        ir.registerBasicArrayType(withTypeName: "Int8Array", scalarType: "Int8")
+        ir.registerBasicType(withTypeName: "ArrayBuffer")
+        ir.registerBasicType(withTypeName: "DataView")
 
         for definition in definitions {
             if let interface = definition as? Interface {
@@ -44,7 +55,20 @@ public class IRGenerator {
 
     func handleNamespace(_ namespace: Namespace) {
 
-        fatalError("Not supported yet")
+        let members = namespace.namespaceMembers.map { (member) -> MemberNode in
+
+            switch member {
+
+            case .regularOperation(let regularOperation, _):
+                return handleRegularOperation(regularOperation)
+            case .readonlyAttribute(let attributeRest):
+                let dataType = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
+                let name = handleAttributeName(attributeRest.attributeName)
+                return ReadonlyPropertyNode(name: name, dataType: dataType, isStatic: false)
+            }
+        }
+
+        ir.registerNamespace(withTypeName: namespace.identifier, members: members)
     }
 
     func handlePartial(_ partial: Partial) {
@@ -92,17 +116,18 @@ public class IRGenerator {
             case .stringifier(_, _):
                 // TODO: Add support
                 break
+
             case .readOnlyAttributeRest(false, let attributeRest, _):
                 let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
                 let name = handleAttributeName(attributeRest.attributeName)
 
-                members.append(ReadWritePropertyNode(name: name, dataType: type))
+                members.append(ReadWritePropertyNode(name: name, dataType: type, isOverride: false, isStatic: false))
 
             case .readOnlyAttributeRest(true, let attributeRest, _):
                   let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
                   let name = handleAttributeName(attributeRest.attributeName)
 
-                  members.append(ReadonlyPropertyNode(name: name, dataType: type))
+                  members.append(ReadonlyPropertyNode(name: name, dataType: type, isStatic: false))
             }
         }
 
@@ -154,8 +179,23 @@ public class IRGenerator {
             case .readOnlyMember(let readOnlyMember, _):
                 members.append(handleReadOnlyMember(readOnlyMember))
 
-            default:
-                continue
+            case .stringifier(_, _):
+                // Not required: JSBridgedType conforms to CustomStringConvertible
+                break
+
+            case .staticMember(let staticMember, _):
+                if let member = handleStaticMember(staticMember) {
+                    members.append(member)
+                }
+
+            case .iterable(let iterable, _):
+                members.append(handleIterable(iterable))
+
+            case .asyncIterable(_, _),
+                 .readWriteMaplike(_, _),
+                 .readWriteSetlike(_, _):
+                // Not implemented yet.
+                break
             }
         }
 
@@ -206,7 +246,7 @@ public class IRGenerator {
                 type = handleUnionMemberTypes(members)
             }
             visitedTypes.append(type)
-            return type.identifier
+                return type.identifier
             }).joined(separator: "Or")
 
         let nodePointer = ir.registerEnumerationWithAssociatedValues(withTypeName: typeName, cases: visitedTypes)
@@ -242,7 +282,7 @@ public class IRGenerator {
         case .distinguishableType(let  distinguishableType):
             return handleDistinguishableType(distinguishableType)
         case .any:
-            return ir.registerBasicType(withTypeName: "AnyJSValueConvertible")
+            return ir.registerBasicType(withTypeName: "AnyJSValueCodable")
 
         case .promiseType(let promise):
             let returnType = handleReturnType(promise.returnType)
@@ -252,16 +292,22 @@ public class IRGenerator {
 
     func handleDistinguishableType(_ distinguishableType: DistinguishableType) -> NodePointer {
 
-        func handleBufferRelated(_ name: String, _ scalarType: String, _ isNullable: Bool) -> NodePointer {
+        func handleBufferRelated(_ name: String, _ isNullable: Bool) -> NodePointer {
 
-            let basicNodePointer = ir.registerBasicType(withTypeName: scalarType)
-            let arrayNode = ArrayNode(element: basicNodePointer)
-            let aliasPointer = ir.registerAliasNode(withTypeName: name, aliasing: arrayNode)
-
+            let basicNodePointer = ir.registerBasicType(withTypeName: name)
             if isNullable {
-                return insertOptional(for: aliasPointer)
+                return insertOptional(for: basicNodePointer)
             }
-            return aliasPointer
+            return basicNodePointer
+        }
+
+        func handleBufferRelatedWithScalarType(_ name: String, _ scalarType: String, _ isNullable: Bool) -> NodePointer {
+
+            let basicNodePointer = ir.registerBasicArrayType(withTypeName: name, scalarType: scalarType)
+            if isNullable {
+                return insertOptional(for: basicNodePointer)
+            }
+            return basicNodePointer
         }
 
         switch distinguishableType {
@@ -288,19 +334,15 @@ public class IRGenerator {
 
         case .sequence(let typeWithExtendedAttributes, let isNullable):
             let type = handleDataType(typeWithExtendedAttributes.dataType)
-//            guard let elementNode = type.node else {
-//                fatalError("Usage of unregistered type")
-//            }
-            let arrayNode = ArrayNode(element: type)
-            let aliasPointer = ir.registerAliasNode(withTypeName: "SequenceOf\(type.identifier)", aliasing: arrayNode)
+            let arrayNode = ir.registerArrayNode(withTypeName: "\(type.identifier)Sequence", element: type)
 
             if isNullable {
-                return insertOptional(for: aliasPointer)
+                return insertOptional(for: arrayNode)
             }
-            return aliasPointer
+            return arrayNode
 
         case .object(let isNullable):
-            let nodePointer = ir.registerBasicType(withTypeName: "AnyJSValueConvertible")
+            let nodePointer = ir.registerBasicType(withTypeName: "AnyJSValueCodable")
             if isNullable {
                 return insertOptional(for: nodePointer)
             }
@@ -310,39 +352,32 @@ public class IRGenerator {
             break
 
         case .bufferRelated(.DataView, let isNullable):
-            let nodePointer = ir.registerBasicType(withTypeName: "DataView")
-            if isNullable {
-                return insertOptional(for: nodePointer)
-            }
-            return nodePointer
+            return handleBufferRelated("DataView", isNullable)
 
         case .bufferRelated(.ArrayBuffer, let isNullable):
-            return handleBufferRelated("ArrayBuffer", "UInt8", isNullable)
+            return handleBufferRelated("ArrayBuffer", isNullable)
 
         case .bufferRelated(.Int8Array, let isNullable):
-            return handleBufferRelated("Int8Array", "Int8", isNullable)
+            return handleBufferRelatedWithScalarType("Int8Array", "Int8", isNullable)
         case .bufferRelated(.Int16Array, let isNullable):
-            return handleBufferRelated("Int16Array", "Int16", isNullable)
+            return handleBufferRelatedWithScalarType("Int16Array", "Int16", isNullable)
         case .bufferRelated(.Int32Array, let isNullable):
-            return handleBufferRelated("Int32Array", "Int32", isNullable)
+            return handleBufferRelatedWithScalarType("Int32Array", "Int32", isNullable)
         case .bufferRelated(.Uint8Array, let isNullable):
-            return handleBufferRelated("Uint8Array", "UInt8", isNullable)
+            return handleBufferRelatedWithScalarType("Uint8Array", "UInt8", isNullable)
         case .bufferRelated(.Uint16Array, let isNullable):
-            return handleBufferRelated("Uint16Array", "UInt16", isNullable)
+            return handleBufferRelatedWithScalarType("Uint16Array", "UInt16", isNullable)
         case .bufferRelated(.Uint32Array, let isNullable):
-            return handleBufferRelated("Uint32Array", "UInt32", isNullable)
+            return handleBufferRelatedWithScalarType("Uint32Array", "UInt32", isNullable)
         case .bufferRelated(.Uint8ClampedArray, let isNullable):
-            return handleBufferRelated("Uint8ClampedArray", "UInt8", isNullable)
+            return handleBufferRelatedWithScalarType("Uint8ClampedArray", "UInt8", isNullable)
         case .bufferRelated(.Float32Array, let isNullable):
-            return handleBufferRelated("Float32Array", "Float", isNullable)
+            return handleBufferRelatedWithScalarType("Float32Array", "Float", isNullable)
         case .bufferRelated(.Float64Array, let isNullable):
-            return handleBufferRelated("Float64Array", "Double", isNullable)
+            return handleBufferRelatedWithScalarType("Float64Array", "Double", isNullable)
         case .frozenArray(let typeWithExtendedAttributes,  let isNullable):
             let type = handleDataType(typeWithExtendedAttributes.dataType)
-            let name = "ArrayOf\(type.identifier)"
-//            guard let elementNode = type.node else {
-//                fatalError("Usage of unregistered type")
-//            }
+            let name = "\(type.identifier)Array"
             let arrayNode = ArrayNode(element: type)
             let aliasPointer = ir.registerAliasNode(withTypeName: name, aliasing: arrayNode)
             if isNullable {
@@ -400,7 +435,7 @@ public class IRGenerator {
             let name = attribute.attributeName.codeRepresentation
             let type = handleDataType(attribute.typeWithExtendedAttributes.dataType)
 
-            return ReadonlyPropertyNode(name: name, dataType: type)
+            return ReadonlyPropertyNode(name: name, dataType: type, isStatic: false)
 
         case .maplike(_):
             fatalError()
@@ -591,11 +626,17 @@ public class IRGenerator {
     func handleReadWriteAttribute(_ readWriteAttribute: ReadWriteAttribute) -> ReadWritePropertyNode {
 
         switch readWriteAttribute {
-        case .inherit(let attributeRest), .notInherit(let attributeRest):
+        case .inherit(let attributeRest):
             let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
             let name = handleAttributeName(attributeRest.attributeName)
 
-            return ReadWritePropertyNode(name: name, dataType: type)
+            return ReadWritePropertyNode(name: name, dataType: type, isOverride: true, isStatic: false)
+
+        case .notInherit(let attributeRest):
+            let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
+            let name = handleAttributeName(attributeRest.attributeName)
+
+            return ReadWritePropertyNode(name: name, dataType: type, isOverride: false, isStatic: false)
         }
     }
 
@@ -613,6 +654,39 @@ public class IRGenerator {
 
         let aliasPointer = ir.registerOptional(for: nodePointer)
         return aliasPointer
+    }
+
+    func handleIterable(_ iterable: Iterable) -> MemberNode {
+
+        switch (iterable.typeWithExtendedAttributes0.dataType, iterable.typeWithExtendedAttributes1?.dataType) {
+        case (let first, let second?):
+            return PairIterableNode(dataType: handleDataType(second))
+
+        case (let first, nil):
+            return ValueIterableNode(dataType: handleDataType(first))
+        }
+    }
+
+    func handleStaticMember(_ staticMember: StaticMember) -> MemberNode? {
+
+        switch staticMember {
+
+        case .readOnlyAttributeRest(false, let attributeRest):
+            let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
+            let name = handleAttributeName(attributeRest.attributeName)
+
+            return ReadWritePropertyNode(name: name, dataType: type, isOverride: false, isStatic: true)
+
+        case .readOnlyAttributeRest(true, let attributeRest):
+            let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
+            let name = handleAttributeName(attributeRest.attributeName)
+
+            return ReadonlyPropertyNode(name: name, dataType: type, isStatic: true)
+            
+        case .regularOperation(let operation):
+            // Not supported. Cannot be looked up
+            return nil
+        }
     }
 }
 

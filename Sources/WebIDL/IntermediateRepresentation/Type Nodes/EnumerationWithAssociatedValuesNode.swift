@@ -45,10 +45,12 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
 
             let node = c.node!
 
+
             if numberOfAssociateValuesOfArrayType == 1, node.isArray {
+
                 protocolConfromances.insert("ExpressibleByArrayLiteral")
                 protocolImplementations.append("""
-                    public init(arrayLiteral elements: \(c.identifier).Element...) {
+                    public init(arrayLiteral elements: \(c.node!.arrayElementSwiftTypeName!)...) {
                     self = .\(caseName)(elements)
                 }
                 """)
@@ -87,22 +89,30 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
 
         let inheritance = ["JSValueEncodable", "JSValueDecodable"] + protocolConfromances.sorted()
 
-        var declaration = "public enum \(typeName): \(inheritance.joined(separator: ", "))"
-        declaration += " {\n"
+        var declaration = """
+            public enum \(typeName): \(inheritance.joined(separator: ", ")) {
+
+                public static func canDecode(from jsValue: JSValue) -> Bool {
+                    return \(cases.map({ "\($0.node!.swiftTypeName).canDecode(from: jsValue)" }).joined(separator: " || "))
+                }
+
+            
+            """
 
         var initMap = [String]()
         declaration += zip(caseNames, cases)
             .map({
 
             let (caseName, nodePointer) = $0
+            let typeName = nodePointer.node!.swiftTypeName
 
             initMap.append("""
-            if jsValue.instanceOf("\(nodePointer.identifier)") {
+            if \(typeName).canDecode(from: jsValue) {
                 self = .\(caseName)(jsValue.fromJSValue())
             }
             """)
 
-            return "case \(caseName)(\(nodePointer.identifier))"
+                return "case \(caseName)(\(typeName))"
             })
             .joined(separator: "\n")
 

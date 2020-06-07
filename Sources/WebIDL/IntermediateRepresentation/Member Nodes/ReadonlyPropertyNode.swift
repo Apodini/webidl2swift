@@ -5,14 +5,16 @@ class ReadonlyPropertyNode: PropertyNode, Equatable {
 
     let name: String
     let dataType: NodePointer
+    let isStatic: Bool
 
-    internal init(name: String, dataType: NodePointer) {
+    internal init(name: String, dataType: NodePointer, isStatic: Bool) {
         self.name = name
         self.dataType = dataType
+        self.isStatic = isStatic
     }
 
     func initializationStatement(forContext context: MemberNodeContext) -> String? {
-        guard context == .classContext, !dataType.node!.isProtocol else {
+        guard case .classContext = context, !dataType.node!.isProtocol, !isStatic else {
             return nil
         }
 
@@ -26,22 +28,34 @@ class ReadonlyPropertyNode: PropertyNode, Equatable {
 
         let dataTypeNode = dataType.node!
 
-        switch inContext {
-        case .classContext where dataTypeNode.isProtocol:
+        switch (inContext, isStatic) {
+        case (.classContext, false) where dataTypeNode.isProtocol:
             declaration = "public var \(escapedName(name)): \(dataTypeNode.swiftTypeName)"
 
-        case .classContext:
+        case (.classContext, false):
             declaration = """
             @ReadonlyAttribute
             public var \(escapedName(name)): \(dataTypeNode.swiftTypeName)
             """
 
-        case .protocolContext:
+        case (.classContext, true) where dataTypeNode.isProtocol:
+            declaration = "public static var \(escapedName(name)): \(dataTypeNode.swiftTypeName)"
+
+        case (.classContext, true):
+            declaration = """
+            @ReadonlyAttribute(objectRef: Self.classRef, name: "\(name)")
+            public static var \(escapedName(name)): \(dataTypeNode.swiftTypeName)
+            """
+
+        case (.protocolContext, _):
             declaration = "var \(escapedName(name)): \(dataTypeNode.swiftTypeName)"
-        case .extensionContext:
+        case (.extensionContext, _):
             declaration = "var \(escapedName(name)): \(dataTypeNode.swiftTypeName)"
-        case .structContext:
+        case (.structContext, _):
             declaration = "var \(escapedName(name)): \(dataTypeNode.swiftTypeName)"
+
+        case (.namespaceContext, _):
+            declaration = "public static var \(escapedName(name)): \(dataTypeNode.swiftTypeName)"
         }
 
         return declaration
@@ -74,7 +88,7 @@ class ReadonlyPropertyNode: PropertyNode, Equatable {
 
 
 
-        case .protocolContext, .extensionContext, .structContext:
+        case .protocolContext, .extensionContext, .structContext, .namespaceContext:
             return [
                 _swiftDeclarations(inContext: inContext) + """
                  {

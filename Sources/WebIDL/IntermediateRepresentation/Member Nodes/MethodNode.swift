@@ -17,7 +17,7 @@ class MethodNode: MemberNode, Equatable {
         return true
     }
 
-    private func _swiftDeclaration(inContext: MemberNodeContext, withImplementation: Bool) -> [String] {
+    private func _swiftDeclaration(inContext context: MemberNodeContext, withImplementation: Bool) -> [String] {
 
         var declarations = [String]()
         var parameters = self.parameters
@@ -28,9 +28,14 @@ class MethodNode: MemberNode, Equatable {
 
             var declaration: String
 
-            if case .classContext = inContext {
-                declaration = "public func \(name)"
-            } else {
+            switch context {
+            case .classContext:
+            declaration = "public func \(name)"
+
+            case .namespaceContext:
+                declaration = "public static func \(name)"
+
+            default:
                 declaration = "func \(name)"
             }
 
@@ -40,7 +45,7 @@ class MethodNode: MemberNode, Equatable {
             for parameter in parameters {
 
                 let dataTypeNode = parameter.dataType.node!
-                let type: String
+                var type: String
                 if dataTypeNode.isProtocol {
                     if dataTypeNode.isOptional {
                         type = "\(dataTypeNode.nonOptionalTypeName)Type?"
@@ -54,6 +59,11 @@ class MethodNode: MemberNode, Equatable {
                 } else {
                     type = dataTypeNode.swiftTypeName
                 }
+
+                if parameter.isVariadic {
+                    type += "..."
+                }
+
                 if let defaultValue = parameter.defaultValue {
                     let value: String
                     if let enumNode = defaultValue.dataType.node as? EnumerationWithRawValueNode {
@@ -66,6 +76,7 @@ class MethodNode: MemberNode, Equatable {
                     } else {
                         value = defaultValue.value
                     }
+
                     parameterDeclarations.append("\(parameter.label): \(type) = \(value)")
                 } else {
                     parameterDeclarations.append("\(parameter.label): \(type)")

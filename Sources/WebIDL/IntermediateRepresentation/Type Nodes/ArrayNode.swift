@@ -21,6 +21,10 @@ class ArrayNode: TypeNode, Equatable {
         return ""
     }
 
+    var arrayElementSwiftTypeName: String? {
+        return element.node!.swiftTypeName
+    }
+
     static func == (lhs: ArrayNode, rhs: ArrayNode) -> Bool {
         return lhs.element == rhs.element
     }

@@ -21,6 +21,10 @@ class RecordNode: TypeNode, Equatable {
         ""
     }
 
+    func typeCheck(withArgument argument: String) -> String {
+         return "case .object = \(argument)"
+    }
+
     static func == (lhs: RecordNode, rhs: RecordNode) -> Bool {
         return lhs.value == rhs.value
     }

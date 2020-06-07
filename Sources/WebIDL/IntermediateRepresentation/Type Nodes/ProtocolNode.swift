@@ -26,10 +26,12 @@ class ProtocolNode: TypeNode, Equatable {
     }
 
     var typeErasedSwiftType: String {
-        return "TypeErased\(swiftTypeName)"
+        return "Any\(swiftTypeName)"
     }
 
     var swiftDeclaration: String {
+
+        let context = MemberNodeContext.protocolContext(typeName)
 
         let (namedSubscript, indexedSubscript) = SubscriptNode.mergedSubscriptNodes(requiredMembers.filter({ $0.isSubscript }) as! [SubscriptNode])
 
@@ -40,15 +42,15 @@ class ProtocolNode: TypeNode, Equatable {
         """
 
         declaration += "\n"
-        namedSubscript.map { declaration += $0.swiftDeclarations(inContext: .protocolContext).joined(separator: "\n\n")}
+        namedSubscript.map { declaration += $0.swiftDeclarations(inContext: context).joined(separator: "\n\n")}
         declaration += "\n"
-        indexedSubscript.map { declaration += $0.swiftDeclarations(inContext: .protocolContext).joined(separator: "\n\n")}
+        indexedSubscript.map { declaration += $0.swiftDeclarations(inContext: context).joined(separator: "\n\n")}
         declaration += "\n"
 
         declaration += requiredMembers
             .filter({ !$0.isSubscript })
             .flatMap({
-                return $0.swiftDeclarations(inContext: .protocolContext)
+                return $0.swiftDeclarations(inContext: context)
             })
             .joined(separator: "\n\n")
 
@@ -67,15 +69,15 @@ class ProtocolNode: TypeNode, Equatable {
             """
 
             declaration += "\n"
-            namedSubscript.map { declaration += $0.swiftImplementations(inContext: .protocolContext).joined(separator: "\n\n")}
+            namedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n")}
             declaration += "\n"
-            indexedSubscript.map { declaration += $0.swiftImplementations(inContext: .protocolContext).joined(separator: "\n\n")}
+            indexedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n")}
             declaration += "\n"
 
             declaration += defaultImplementations
                        .filter({ !$0.isSubscript })
                        .flatMap({
-                           return $0.swiftImplementations(inContext: .protocolContext)
+                           return $0.swiftImplementations(inContext: context)
                        })
                        .joined(separator: "\n\n")
 
@@ -84,6 +86,10 @@ class ProtocolNode: TypeNode, Equatable {
         }
 
         return declaration
+    }
+
+    func typeCheck(withArgument argument: String) -> String {
+        return "false"
     }
 
     static func == (lhs: ProtocolNode, rhs: ProtocolNode) -> Bool {

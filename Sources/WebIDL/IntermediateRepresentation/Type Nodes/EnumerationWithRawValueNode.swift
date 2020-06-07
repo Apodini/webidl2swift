@@ -30,19 +30,25 @@ class EnumerationWithRawValueNode: TypeNode, Equatable {
             return (String(c.first!.lowercased() + c.dropFirst()), c)
         })
 
-        var declaration = "public enum \(typeName): String, JSValueEncodable, JSValueDecodable"
-        declaration += " {\n"
+        var declaration = """
+        public enum \(typeName): String, JSValueCodable {
+
+            public static func canDecode(from jsValue: JSValue) -> Bool {
+                return jsValue.isString
+            }
+
+        """
+
         declaration += casesAndRawValues.map({ "case \($0.0) = \"\($0.1)\"" }).joined(separator: "\n")
         declaration += """
 
 
             public init(jsValue: JSValue) {
 
-                switch jsValue.fromJSValue() as String {
-                \(casesAndRawValues.map({ "case \"\($0.1)\":\nself = .\($0.0)"}).joined(separator: "\n"))
-                default:
+                guard let value = \(typeName)(rawValue: jsValue.fromJSValue()) else {
                     fatalError()
                 }
+                self = value
             }
 
             public func jsValue() -> JSValue {
@@ -56,5 +62,10 @@ class EnumerationWithRawValueNode: TypeNode, Equatable {
 
     static func == (lhs: EnumerationWithRawValueNode, rhs: EnumerationWithRawValueNode) -> Bool {
         return lhs.cases == rhs.cases
+    }
+
+    func typeCheck(withArgument argument: String) -> String {
+
+        return "case .string(let string) = \(argument), \(cases).contains(string)"
     }
 }

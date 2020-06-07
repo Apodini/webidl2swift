@@ -23,6 +23,8 @@ class ClassNode: TypeNode, Equatable {
 
     var swiftDeclaration: String {
 
+        let context = MemberNodeContext.classContext(typeName)
+
         let (namedSubscript, indexedSubscript) = SubscriptNode.mergedSubscriptNodes( members.filter({ $0.isSubscript }) as! [SubscriptNode])
 
         let propertyNodes = members.compactMap({ $0 as? PropertyNode })
@@ -43,22 +45,26 @@ class ClassNode: TypeNode, Equatable {
             }
         }
 
+        let adoptedProtocols = members.flatMap { $0.adoptedProtocols }
+
         if let first = sorted.first, first.node!.isClass {
             isBaseClass = false
-            inheritance = sorted.map({ $0.node!.swiftTypeName }).joined(separator: ", ")
+            inheritance = (sorted.map({ $0.node!.swiftTypeName }) + adoptedProtocols).joined(separator: ", ")
         } else {
             isBaseClass = true
-            inheritance = (["JSBridgedType"] + sorted.map({ $0.node!.swiftTypeName })).joined(separator: ", ")
+            inheritance = (["JSBridgedType"] + sorted.map({ $0.node!.swiftTypeName }) + adoptedProtocols).joined(separator: ", ")
         }
 
         if isBaseClass {
             declaration = """
             public class \(typeName): \(inheritance) {
 
+                public class var classRef: JSFunctionRef { JSObjectRef.global.\(typeName).function! }
+
                 public let objectRef: JSObjectRef
 
                 public required init(objectRef: JSObjectRef) {
-                    \(propertyNodes.compactMap({ $0.initializationStatement(forContext: .classContext) }).joined(separator: "\n"))
+                    \(propertyNodes.compactMap({ $0.initializationStatement(forContext: context) }).joined(separator: "\n"))
                     self.objectRef = objectRef
                 }
 
@@ -67,8 +73,10 @@ class ClassNode: TypeNode, Equatable {
             declaration = """
             public class \(typeName): \(inheritance) {
 
+                public override class var classRef: JSFunctionRef { JSObjectRef.global.\(typeName).function! }
+
                 public required init(objectRef: JSObjectRef) {
-                    \(propertyNodes.compactMap({ $0.initializationStatement(forContext: .classContext) }).joined(separator: "\n"))
+                    \(propertyNodes.compactMap({ $0.initializationStatement(forContext: context) }).joined(separator: "\n"))
                     super.init(objectRef: objectRef)
                 }
 
@@ -76,21 +84,30 @@ class ClassNode: TypeNode, Equatable {
         }
 
         declaration += "\n"
-        namedSubscript.map { declaration += $0.swiftImplementations(inContext: .classContext).joined(separator: "\n\n")}
+        members.map { declaration += $0.typealiases.joined(separator: "\n")}
         declaration += "\n"
-        indexedSubscript.map { declaration += $0.swiftImplementations(inContext: .classContext).joined(separator: "\n\n")}
+
+        declaration += "\n"
+        namedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n")}
+        declaration += "\n"
+        indexedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n")}
         declaration += "\n"
 
         declaration += members
             .filter({ !$0.isSubscript })
             .flatMap({
-                return $0.swiftImplementations(inContext: .classContext)
+                return $0.swiftImplementations(inContext: context)
             })
             .joined(separator: "\n\n")
 
         declaration += "\n}"
 
         return declaration
+    }
+
+    func typeCheck(withArgument argument: String) -> String {
+
+        return "\(argument).instanceOf(\"\(typeName)\")"
     }
 
     static func == (lhs: ClassNode, rhs: ClassNode) -> Bool {

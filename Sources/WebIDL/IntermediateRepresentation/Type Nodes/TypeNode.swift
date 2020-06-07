@@ -42,6 +42,8 @@ extension TypeNode {
     var isProtocol: Bool { false }
     var isClass: Bool { false }
 
+    var isNamespace: Bool { false }
+
     var isRecord: Bool { false }
 
     var nonOptionalTypeName: String { swiftTypeName }
@@ -49,6 +51,8 @@ extension TypeNode {
     var typeErasedSwiftType: String { swiftTypeName }
 
     var numberOfClosureArguments: Int { 0 }
+
+    var arrayElementSwiftTypeName: String? { nil }
 }
 
 func equal(_ lhs: TypeNode, _ rhs: TypeNode) -> Bool {
@@ -67,13 +71,17 @@ func equal(_ lhs: TypeNode, _ rhs: TypeNode) -> Bool {
         return l == r
     } else if let l = lhs as? BasicTypeNode, let r = rhs as? BasicTypeNode {
             return l == r
+    } else if let l = lhs as? BasicArrayTypeNode, let r = rhs as? BasicArrayTypeNode {
+            return l == r
     } else if let l = lhs as? EnumerationWithAssociatedValuesNode, let r = rhs as? EnumerationWithAssociatedValuesNode {
         return l == r
     } else if let l = lhs as? ClassNode, let r = rhs as? ClassNode {
         return l == r
+    } else if let l = lhs as? NamespaceNode, let r = rhs as? NamespaceNode {
+        return l == r
     } else if let l = lhs as? ProtocolNode, let r = rhs as? ProtocolNode {
         return l == r
-    } else if let l = lhs as? TypeErasedWrapperStruct, let r = rhs as? TypeErasedWrapperStruct {
+    } else if let l = lhs as? TypeErasedWrapperStructNode, let r = rhs as? TypeErasedWrapperStructNode {
         return l == r
     } else if let l = lhs as? RecordNode, let r = rhs as? RecordNode {
         return l == r

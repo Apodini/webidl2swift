@@ -26,6 +26,10 @@ class ClosureNode: TypeNode, Equatable {
         return ""
     }
 
+    func typeCheck(withArgument argument: String) -> String {
+        return "false"
+    }
+
     static func == (lhs: ClosureNode, rhs: ClosureNode) -> Bool {
         return lhs.returnType == rhs.returnType && lhs.arguments.count == rhs.arguments.count && lhs.arguments == rhs.arguments
     }

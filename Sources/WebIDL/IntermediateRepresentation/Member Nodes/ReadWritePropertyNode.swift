@@ -5,10 +5,14 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
 
     let name: String
     let dataType: NodePointer
+    let isOverride: Bool
+    let isStatic: Bool
 
-    internal init(name: String, dataType: NodePointer) {
+    internal init(name: String, dataType: NodePointer, isOverride: Bool, isStatic: Bool) {
         self.name = name
         self.dataType = dataType
+        self.isOverride = isOverride
+        self.isStatic = isStatic
     }
 
     var isProperty: Bool {
@@ -17,7 +21,7 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
 
     func initializationStatement(forContext context: MemberNodeContext) -> String? {
 
-        guard context == .classContext, !dataType.node!.isProtocol else {
+        guard case .classContext = context, !dataType.node!.isProtocol, !isStatic else {
             return nil
         }
 
@@ -27,10 +31,12 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
             return """
             _\(name) = \(dataTypeNode.isOptional ? "OptionalClosureHandler" : "ClosureHandler")(objectRef: objectRef, name: "\(name)")
             """
-        } else {
+        } else if !isOverride {
             return """
             _\(name) = ReadWriteAttribute(objectRef: objectRef, name: "\(name)")
             """
+        } else {
+            return nil
         }
     }
 
@@ -40,30 +46,78 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
 
         let dataTypeNode = dataType.node!
 
-        switch inContext {
-        case .classContext where dataTypeNode.isProtocol:
+        switch (inContext, isStatic) {
+        case (.classContext, false) where dataTypeNode.isProtocol:
             return "public var \(escapedName(name)): \(dataTypeNode.swiftTypeName)"
 
-        case .classContext where dataTypeNode.isClosure && dataTypeNode.isOptional && dataTypeNode.numberOfClosureArguments == 1:
+        case (.classContext, true) where dataTypeNode.isProtocol:
+        return "public static var \(escapedName(name)): \(dataTypeNode.swiftTypeName)"
+
+        case (.classContext, false) where dataTypeNode.isClosure && dataTypeNode.isOptional && dataTypeNode.numberOfClosureArguments == 1:
             declaration = """
             @OptionalClosureHandler
             public var \(escapedName(name)): \(dataTypeNode.swiftTypeName)
             """
 
-        case .classContext where dataTypeNode.isClosure && dataTypeNode.numberOfClosureArguments == 1:
+        case (.classContext, true) where dataTypeNode.isClosure && dataTypeNode.isOptional && dataTypeNode.numberOfClosureArguments == 1:
+            declaration = """
+            @OptionalClosureHandler(objectRef: Self.classRef, name: "\(name)")
+            public static var \(escapedName(name)): \(dataTypeNode.swiftTypeName)
+            """
+
+        case (.classContext, false) where dataTypeNode.isClosure && dataTypeNode.numberOfClosureArguments == 1:
             declaration = """
             @ClosureHandler
             public var \(escapedName(name)): \(dataTypeNode.swiftTypeName)
             """
 
-        case .classContext:
+        case (.classContext, true) where dataTypeNode.isClosure && dataTypeNode.numberOfClosureArguments == 1:
+            declaration = """
+            @ClosureHandler(objectRef: Self.classRef, name: "\(name)")
+            public var \(escapedName(name)): \(dataTypeNode.swiftTypeName)
+            """
+
+        case (.classContext, false) where isOverride:
+            declaration = """
+            public override var \(escapedName(name)): \(dataTypeNode.swiftTypeName) {
+                get {
+                    return objectRef[dynamicMember: "\(name)"]
+                }
+                set {
+                    objectRef[dynamicMember: "\(name)"] = newValue
+                }
+            }
+            """
+
+        case (.classContext, true) where isOverride:
+            declaration = """
+            public static override var \(escapedName(name)): \(dataTypeNode.swiftTypeName) {
+                get {
+                    return objectRef[dynamicMember: "\(name)"]
+                }
+                set {
+                    objectRef[dynamicMember: "\(name)"] = newValue
+                }
+            }
+            """
+
+        case (.classContext, false):
             declaration = """
             @ReadWriteAttribute
             public var \(escapedName(name)): \(dataTypeNode.swiftTypeName)
             """
 
-        case .protocolContext, .extensionContext, .structContext:
+        case (.classContext, true):
+            declaration = """
+            @ReadWriteAttribute(objectRef: Self.classRef, name: "\(name)")
+            public static var \(escapedName(name)): \(dataTypeNode.swiftTypeName)
+            """
+
+        case (.protocolContext, _), (.extensionContext, _), (.structContext, _):
             declaration = "var \(escapedName(name)): \(dataTypeNode.swiftTypeName)"
+
+        case (.namespaceContext, _):
+            fatalError("Not supported by Web IDL standard!")
         }
 
         return declaration
@@ -163,6 +217,8 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
                  }
                  """
              ]
+        case .namespaceContext:
+            fatalError("Not supported by Web IDL standard!")
         }
     }
 

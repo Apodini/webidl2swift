@@ -25,6 +25,9 @@ class ConstantPropertyNode: PropertyNode, Equatable {
 
         case .protocolContext, .extensionContext, .structContext:
             return "var \(escapedName(name)): \(dataType.node!.swiftTypeName)"
+
+        case .namespaceContext:
+            fatalError("Not supported by Web IDL standard!")
         }
     }
 
@@ -41,6 +44,9 @@ class ConstantPropertyNode: PropertyNode, Equatable {
 
         case .protocolContext, .extensionContext, .structContext:
             return ["\(_swiftDeclarations(inContext: inContext)) {\nreturn \(value)\n}"]
+
+        case .namespaceContext:
+            fatalError("Not supported by Web IDL standard!")
         }
     }
 

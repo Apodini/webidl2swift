@@ -1,7 +1,6 @@
 
 import Foundation
 
-
 let swiftKeyWords: [String : String] = [
     "init" : "`init`",
     "where" : "`where`",
@@ -104,6 +103,37 @@ public class IntermediateRepresentation: Collection {
         return nodePointer
     }
 
+    @discardableResult
+    func registerBasicArrayType(withTypeName typeName: String, scalarType: String) -> NodePointer {
+
+        let nodePointer = existingOrNewNodePointer(for: typeName)
+        if let alreadyRegisterd = nodePointer.node {
+            guard alreadyRegisterd is BasicArrayTypeNode else {
+                fatalError("Type mismatch for already registered Type!")
+            }
+        } else {
+            nodePointer.node = BasicArrayTypeNode(typeName: typeName, scalarType: scalarType)
+        }
+
+        return nodePointer
+    }
+
+    @discardableResult
+    func registerArrayNode(withTypeName typeName: String, element: NodePointer) -> NodePointer {
+
+        let nodePointer = existingOrNewNodePointer(for: typeName)
+        if let alreadyRegisterd = nodePointer.node {
+            guard let arrayNode = alreadyRegisterd as? ArrayNode, arrayNode.element == element else {
+                fatalError("Type mismatch for already registered Type!")
+            }
+        } else {
+            nodePointer.node = ArrayNode(element: element)
+        }
+
+        return nodePointer
+    }
+
+
     func registerAliasNode(withTypeName typeName: String, aliasing: TypeNode) -> NodePointer {
 
         let nodePointer = existingOrNewNodePointer(for: typeName)
@@ -195,7 +225,7 @@ public class IntermediateRepresentation: Collection {
     func registerProtocol(withTypeName typeName: String, inheritsFrom: Set<NodePointer>, requiredMembers: [MemberNode], defaultImplementations: [MemberNode]) -> NodePointer {
 
         let nodePointer = existingOrNewNodePointer(for: typeName)
-        let typeErasedPointer = existingOrNewNodePointer(for: "TypeErased\(typeName)")
+        let typeErasedPointer = existingOrNewNodePointer(for: "Any\(typeName)")
         if let alreadyRegisterd = nodePointer.node {
             guard let existingProtocolNode = alreadyRegisterd as? ProtocolNode else {
                     fatalError("Type mismatch for already registered Type!")
@@ -205,7 +235,7 @@ public class IntermediateRepresentation: Collection {
             existingProtocolNode.defaultImplementations.append(contentsOf: defaultImplementations)
         } else {
             nodePointer.node = ProtocolNode(typeName: typeName, inheritsFrom: inheritsFrom, requiredMembers: requiredMembers, defaultImplementations: defaultImplementations)
-            typeErasedPointer.node = TypeErasedWrapperStruct(wrapped: nodePointer)
+            typeErasedPointer.node = TypeErasedWrapperStructNode(wrapped: nodePointer)
         }
 
         return nodePointer
@@ -223,6 +253,22 @@ public class IntermediateRepresentation: Collection {
             existingClass.members.append(contentsOf: members)
         } else {
             nodePointer.node = ClassNode(typeName: typeName, inheritsFrom: inheritsFrom, members: members)
+        }
+
+        return nodePointer
+    }
+
+    @discardableResult
+    func registerNamespace(withTypeName typeName: String, members: [MemberNode]) -> NodePointer {
+
+        let nodePointer = existingOrNewNodePointer(for: typeName)
+        if let alreadyRegisterd = nodePointer.node {
+            guard let existingNamespace = alreadyRegisterd as? NamespaceNode else {
+                    fatalError("Type mismatch for already registered Type!")
+            }
+            existingNamespace.members.append(contentsOf: members)
+        } else {
+            nodePointer.node = NamespaceNode(typeName: typeName, members: members)
         }
 
         return nodePointer

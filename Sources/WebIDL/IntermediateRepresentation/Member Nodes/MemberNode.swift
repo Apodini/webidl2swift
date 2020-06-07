@@ -29,10 +29,11 @@ extension PropertyNode {
 
 enum MemberNodeContext {
 
-    case classContext
-    case protocolContext
-    case extensionContext
-    case structContext
+    case classContext(String)
+    case protocolContext(String)
+    case extensionContext(String)
+    case structContext(String)
+    case namespaceContext(String)
 }
 
 extension MemberNode {
@@ -42,4 +43,7 @@ extension MemberNode {
     var isSubscript: Bool { false }
     var isProperty: Bool { false }
     var needsInitialization: Bool { false }
+    var isStatic: Bool { false }
+    var adoptedProtocols: [String] { [] }
+    var typealiases: [String] { [] }
 }
