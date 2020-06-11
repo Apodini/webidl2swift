@@ -1,7 +1,10 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
-protocol ExpressionNode: class {
+protocol ExpressionNode: AnyObject {
 
     var dataType: NodePointer { get }
 }

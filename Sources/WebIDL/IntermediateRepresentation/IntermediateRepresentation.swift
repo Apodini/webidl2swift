@@ -1,22 +1,36 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
-let swiftKeyWords: [String : String] = [
-    "init" : "`init`",
-    "where" : "`where`",
-    "protocol" : "`protocol`",
-    "struct" : "`struct`",
-    "class" : "`class`",
-    "enum" : "`enum`",
-    "func" : "`func`",
-    "static" : "`static`",
-    "is" : "`is`",
+let swiftKeyWords: [String: String] = [
+    "init": "`init`",
+    "where": "`where`",
+    "protocol": "`protocol`",
+    "struct": "`struct`",
+    "class": "`class`",
+    "enum": "`enum`",
+    "func": "`func`",
+    "static": "`static`",
+    "is": "`is`",
 ]
 
 func escapedName(_ string: String ) -> String {
-    return swiftKeyWords[string, default: string]
+    swiftKeyWords[string, default: string]
 }
 
+/// Unwrap a the `node` property of a `NodePointer` instance or abort the execution with an error message.
+/// - Parameter nodePointer: The `NodePointer` whose `node` property should be checked.
+/// - Returns: The unwrapped value of `node`.
+public func unwrapNode(_ nodePointer: NodePointer) -> TypeNode {
+    guard let node = nodePointer.node else {
+        fatalError("Accessing undefined node for type \(nodePointer.identifier)")
+    }
+    return node
+}
+
+/// `NodePointer` allows to reference a TypeNode before its definition was parsed.
 public class NodePointer: Hashable {
 
     public let identifier: String
@@ -31,7 +45,7 @@ public class NodePointer: Hashable {
         identifier.hash(into: &hasher)
     }
 
-    public static func ==(lhs: NodePointer, rhs: NodePointer) -> Bool {
+    public static func == (lhs: NodePointer, rhs: NodePointer) -> Bool {
         switch (lhs.node, rhs.node) {
         case (let lhsNode?, let rhsNode?) where equal(lhsNode, rhsNode):
             return lhs.identifier == rhs.identifier
@@ -48,33 +62,33 @@ public class IntermediateRepresentation: Collection {
     public typealias Index = Swift.Dictionary<String, NodePointer>.Index
     public typealias Element = Swift.Dictionary<String, NodePointer>.Element
 
-    public func index(after i: Index) -> Index {
+    public func index(after index: Index) -> Index {
 
-        nodes.index(after: i)
+        nodes.index(after: index)
     }
 
     public var startIndex: Index {
-        return nodes.startIndex
+        nodes.startIndex
     }
 
     public var endIndex: Index {
-        return nodes.endIndex
+        nodes.endIndex
     }
 
-    private var nodes = [String : NodePointer]()
+    private var nodes = [String: NodePointer]()
 
     init() {}
 
     subscript(typeName: String) -> NodePointer? {
-        return nodes[typeName]
+        nodes[typeName]
     }
 
     public subscript(index: Index) -> Element {
-        return nodes[index]
+        nodes[index]
     }
 
-    public var undefinedTypes: [Element]  {
-        return filter {
+    public var undefinedTypes: [Element] {
+        filter {
             $0.value.node == nil
         }
     }
@@ -91,7 +105,7 @@ public class IntermediateRepresentation: Collection {
     }
 
     func registerIdentifier(withTypeName typeName: String) -> NodePointer {
-        return existingOrNewNodePointer(for: typeName)
+        existingOrNewNodePointer(for: typeName)
     }
 
     @discardableResult
@@ -139,14 +153,13 @@ public class IntermediateRepresentation: Collection {
         return nodePointer
     }
 
-
     func registerAliasNode(withTypeName typeName: String, aliasing: TypeNode) -> NodePointer {
 
         let nodePointer = existingOrNewNodePointer(for: typeName)
         if let alreadyRegisterd = nodePointer.node {
             guard let existingAliasNode = alreadyRegisterd as? AliasNode,
                 equal(existingAliasNode.aliased, aliasing) else {
-                fatalError("Type mismatch for already registered Type!")
+                    fatalError("Type mismatch for already registered Type!")
             }
         } else {
             nodePointer.node = AliasNode(typeName: typeName, aliased: aliasing)
@@ -180,13 +193,12 @@ public class IntermediateRepresentation: Collection {
     func registerOptional(for nonOptional: NodePointer) -> NodePointer {
 
         let typeName = "Optional\(nonOptional.identifier)"
-//        return registerAliasNode(withTypeName: typeName, aliasing: OptionalNode(wrapped: nodePointer))
 
         let nodePointer = existingOrNewNodePointer(for: typeName)
         if let alreadyRegisterd = nodePointer.node {
             guard let optionalNode = alreadyRegisterd as? OptionalNode,
-            optionalNode.wrapped == nonOptional else {
-                fatalError("Type mismatch for already registered Type!")
+                optionalNode.wrapped == nonOptional else {
+                    fatalError("Type mismatch for already registered Type!")
             }
         } else {
             nodePointer.node = OptionalNode(wrapped: nonOptional)
@@ -234,7 +246,7 @@ public class IntermediateRepresentation: Collection {
         let typeErasedPointer = existingOrNewNodePointer(for: "Any\(typeName)")
         if let alreadyRegisterd = nodePointer.node {
             guard let existingProtocolNode = alreadyRegisterd as? ProtocolNode else {
-                    fatalError("Type mismatch for already registered Type!")
+                fatalError("Type mismatch for already registered Type!")
             }
             existingProtocolNode.inheritsFrom.formUnion(inheritsFrom)
             existingProtocolNode.requiredMembers.append(contentsOf: requiredMembers)
@@ -253,7 +265,7 @@ public class IntermediateRepresentation: Collection {
         let nodePointer = existingOrNewNodePointer(for: typeName)
         if let alreadyRegisterd = nodePointer.node {
             guard let existingClass = alreadyRegisterd as? ClassNode else {
-                    fatalError("Type mismatch for already registered Type!")
+                fatalError("Type mismatch for already registered Type!")
             }
             existingClass.inheritsFrom.formUnion(inheritsFrom)
             existingClass.members.append(contentsOf: members)
@@ -270,7 +282,7 @@ public class IntermediateRepresentation: Collection {
         let nodePointer = existingOrNewNodePointer(for: typeName)
         if let alreadyRegisterd = nodePointer.node {
             guard let existingNamespace = alreadyRegisterd as? NamespaceNode else {
-                    fatalError("Type mismatch for already registered Type!")
+                fatalError("Type mismatch for already registered Type!")
             }
             existingNamespace.members.append(contentsOf: members)
         } else {

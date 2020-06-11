@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -14,10 +17,12 @@ class NamespaceNode: TypeNode, Equatable {
 
     var swiftTypeName: String {
 
-        return typeName
+        typeName
     }
 
-    var isNamespace: Bool { true }
+    var isNamespace: Bool {
+        true
+    }
 
     var swiftDeclaration: String {
 
@@ -32,9 +37,9 @@ class NamespaceNode: TypeNode, Equatable {
         """
 
         declaration += members
-            .flatMap({
-                return $0.swiftImplementations(inContext: context)
-            })
+            .flatMap {
+                $0.swiftImplementations(inContext: context)
+            }
             .joined(separator: "\n\n")
 
         declaration += "\n}"
@@ -43,10 +48,10 @@ class NamespaceNode: TypeNode, Equatable {
     }
 
     static func == (lhs: NamespaceNode, rhs: NamespaceNode) -> Bool {
-        return lhs.typeName == rhs.typeName
+        lhs.typeName == rhs.typeName
     }
 
     func typeCheck(withArgument argument: String) -> String {
-        return "false"
+        "false"
     }
 }

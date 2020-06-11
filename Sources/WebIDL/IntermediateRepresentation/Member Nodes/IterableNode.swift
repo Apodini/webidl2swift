@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -15,20 +18,20 @@ class ValueIterableNode: MemberNode, Equatable {
         ["Sequence"]
     }
     var typealiases: [String] {
-        ["public typealias Element = \(dataType.node!.swiftTypeName)"]
+        ["public typealias Element = \(unwrapNode(dataType).swiftTypeName)"]
     }
 
     func swiftDeclarations(inContext: MemberNodeContext) -> [String] {
 
-        return _swiftDeclarations(inContext: inContext, withImplementation: false)
+        _swiftDeclarations(inContext: inContext, withImplementation: false)
     }
 
     func swiftImplementations(inContext: MemberNodeContext) -> [String] {
 
-        return _swiftDeclarations(inContext: inContext, withImplementation: true)
+        _swiftDeclarations(inContext: inContext, withImplementation: true)
     }
 
-    func _swiftDeclarations(inContext: MemberNodeContext, withImplementation: Bool) -> [String] {
+    private func _swiftDeclarations(inContext: MemberNodeContext, withImplementation: Bool) -> [String] {
 
         switch inContext {
         case .classContext(let name):
@@ -44,7 +47,7 @@ class ValueIterableNode: MemberNode, Equatable {
     }
 
     static func == (lhs: ValueIterableNode, rhs: ValueIterableNode) -> Bool {
-        return lhs.dataType == rhs.dataType
+        lhs.dataType == rhs.dataType
     }
 }
 
@@ -62,20 +65,20 @@ class PairIterableNode: MemberNode, Equatable {
         ["KeyValueSequence"]
     }
     var typealiases: [String] {
-        ["public typealias Value = \(dataType.node!.swiftTypeName)"]
+        ["public typealias Value = \(unwrapNode(dataType).swiftTypeName)"]
     }
 
     func swiftDeclarations(inContext: MemberNodeContext) -> [String] {
 
-        return _swiftDeclarations(inContext: inContext, withImplementation: false)
+        _swiftDeclarations(inContext: inContext, withImplementation: false)
     }
 
     func swiftImplementations(inContext: MemberNodeContext) -> [String] {
 
-        return _swiftDeclarations(inContext: inContext, withImplementation: true)
+        _swiftDeclarations(inContext: inContext, withImplementation: true)
     }
 
-    func _swiftDeclarations(inContext: MemberNodeContext, withImplementation: Bool) -> [String] {
+    private func _swiftDeclarations(inContext: MemberNodeContext, withImplementation: Bool) -> [String] {
 
         switch inContext {
         case .classContext(let name):
@@ -91,6 +94,6 @@ class PairIterableNode: MemberNode, Equatable {
     }
 
     static func == (lhs: PairIterableNode, rhs: PairIterableNode) -> Bool {
-        return lhs.dataType == rhs.dataType
+        lhs.dataType == rhs.dataType
     }
 }

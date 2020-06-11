@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -25,45 +28,45 @@ class SubscriptNode: MemberNode, Equatable {
     }
 
     var isSubscript: Bool {
-        return true
+        true
     }
 
     var isIndexed: Bool {
 
-        return nameParameter.dataType.identifier == "UInt64"
+        nameParameter.dataType.identifier == "UInt64"
     }
 
     var isNamed: Bool {
 
-        return nameParameter.dataType.identifier == "String"
+        nameParameter.dataType.identifier == "String"
     }
 
     var isGetter: Bool {
-        return kind.contains(.getter)
+        kind.contains(.getter)
     }
 
     var isSetter: Bool {
-        return kind.contains(.setter)
+        kind.contains(.setter)
     }
 
     var isDeleter: Bool {
-        return kind.contains(.deleter)
+        kind.contains(.deleter)
     }
 
+    // swiftlint:disable function_body_length
     private func _swiftDeclaration(inContext: MemberNodeContext, withImplementation: Bool) -> [String] {
 
         var declaration: String
-
         if case .classContext = inContext {
             declaration = "public subscript"
         } else {
             declaration = "subscript"
         }
+        let returnTypeNode = unwrapNode(returnType)
 
-        declaration += "(\(nameParameter.label): \(nameParameter.dataType.node!.swiftTypeName)) -> \(returnType.node!.swiftTypeName)?"
+        declaration += "(\(nameParameter.label): \(unwrapNode(nameParameter.dataType).swiftTypeName)) -> \(returnTypeNode.swiftTypeName)?"
 
         if withImplementation {
-
             let lookup: String
             declaration += " {\n"
             if isNamed {
@@ -72,12 +75,12 @@ class SubscriptNode: MemberNode, Equatable {
                 lookup = "objectRef[\(nameParameter.label)]"
             }
 
-            if returnType.node!.isProtocol {
-            declaration += """
-            get {
-                return \(lookup).fromJSValue() as \(returnType.node!.typeErasedSwiftType)
-            }
-            """
+            if returnTypeNode.isProtocol {
+                declaration += """
+                get {
+                    return \(lookup).fromJSValue() as \(returnTypeNode.typeErasedSwiftType)
+                }
+                """
             } else {
                 declaration += """
                 get {
@@ -87,27 +90,28 @@ class SubscriptNode: MemberNode, Equatable {
             }
 
             if isSetter && isDeleter {
-            declaration += """
-            set {
-                \(lookup) = newValue.jsValue()
-            }
-            """
-            } else if isSetter {
-            declaration += """
-
-            set {
-                if let newValue = newValue  {
+                declaration += """
+                
+                set {
                     \(lookup) = newValue.jsValue()
                 }
-            }
-            """
-            } else if isDeleter {
-            declaration += """
+                """
+            } else if isSetter {
+                declaration += """
 
-            set {
-                \(lookup) = .null
-            }
-            """
+                set {
+                    if let newValue = newValue  {
+                        \(lookup) = newValue.jsValue()
+                    }
+                }
+                """
+            } else if isDeleter {
+                declaration += """
+
+                set {
+                    \(lookup) = .null
+                }
+                """
             }
 
             declaration += "\n}"
@@ -115,19 +119,20 @@ class SubscriptNode: MemberNode, Equatable {
 
         return [declaration]
     }
+    // swiftlint:enable function_body_length
 
     func swiftDeclarations(inContext: MemberNodeContext) -> [String] {
 
-        return _swiftDeclaration(inContext: inContext, withImplementation: false)
+        _swiftDeclaration(inContext: inContext, withImplementation: false)
     }
 
     func swiftImplementations(inContext: MemberNodeContext) -> [String] {
 
-        return _swiftDeclaration(inContext: inContext, withImplementation: true)
+        _swiftDeclaration(inContext: inContext, withImplementation: true)
     }
 
     static func == (lhs: SubscriptNode, rhs: SubscriptNode) -> Bool {
-        return lhs.returnType == rhs.returnType && lhs.kind == rhs.kind && lhs.nameParameter == rhs.nameParameter && lhs.valueParameter == rhs.valueParameter
+        lhs.returnType == rhs.returnType && lhs.kind == rhs.kind && lhs.nameParameter == rhs.nameParameter && lhs.valueParameter == rhs.valueParameter
     }
 
     static func mergedSubscriptNodes(_ subscriptMembers: [SubscriptNode]) -> (SubscriptNode?, SubscriptNode?) {
@@ -136,7 +141,7 @@ class SubscriptNode: MemberNode, Equatable {
         let indexedSubscript: SubscriptNode? = subscriptMembers.first(where: { $0.isGetter && $0.isIndexed })
 
         for subscriptMember in subscriptMembers {
-
+            // swiftlint:disable force_unwrapping
             switch subscriptMember.kind {
             case let value where value.contains(.setter) && subscriptMember.isNamed && subscriptMember.valueParameter?.dataType == namedSubscript!.returnType:
                 namedSubscript!.kind.insert(.setter)
@@ -155,6 +160,7 @@ class SubscriptNode: MemberNode, Equatable {
             default:
                 continue
             }
+            // swiftlint:enable force_unwrapping
         }
 
         return (namedSubscript, indexedSubscript)

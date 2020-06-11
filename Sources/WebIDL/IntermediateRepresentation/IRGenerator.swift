@@ -1,13 +1,25 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
+// swiftlint:disable type_body_length file_length
+/// `IRGenerator` creates an `IntermediateRepresentation` for a list of Web IDL definitions.
 public class IRGenerator {
 
+    // swiftlint:disable:next identifier_name
     var ir = IntermediateRepresentation()
     var useSimpleTypes: Bool = false
 
+    /// Public initalizer
     public init() {}
 
+    // swiftlint:disable cyclomatic_complexity
+
+    /// Create an `IntermediateRepresentation` from a list of definitions
+    /// - Parameter definitions: A list of parsed Web IDL definitons.
+    /// - Returns: An `IntermediateRepresentation` instance containing all types generated for `definitions`.
     public func generateIR(for definitions: [Definition]) -> IntermediateRepresentation {
 
         // https://streams.spec.whatwg.org/#rs-class
@@ -48,17 +60,18 @@ public class IRGenerator {
             }
         }
 
+        // swiftlint:disable:next identifier_name
         let ir = self.ir
         self.ir = IntermediateRepresentation()
         return ir
     }
+    // swiftlint:enable cyclomatic_complexity
 
     func handleNamespace(_ namespace: Namespace) {
 
-        let members = namespace.namespaceMembers.map { (member) -> MemberNode in
+        let members = namespace.namespaceMembers.map { member -> MemberNode in
 
             switch member {
-
             case .regularOperation(let regularOperation, _):
                 return handleRegularOperation(regularOperation)
             case .readonlyAttribute(let attributeRest):
@@ -74,7 +87,6 @@ public class IRGenerator {
     func handlePartial(_ partial: Partial) {
 
         switch partial {
-
         case .interface(let interface, _):
             handleInterface(interface)
         case .mixin(let mixin, _):
@@ -90,7 +102,7 @@ public class IRGenerator {
 
         let inheritsFrom = dictionary.inheritance.map { ir.registerIdentifier(withTypeName: $0.identifier) }
 
-        let memberIdentifiers = dictionary.members.map({ $0.identifier })
+        let memberIdentifiers = dictionary.members.map { $0.identifier }
         _ = ir.registerDictionaryNode(withTypeName: dictionary.identifier, inheritsFrom: inheritsFrom, members: memberIdentifiers)
     }
 
@@ -101,33 +113,27 @@ public class IRGenerator {
     }
 
     func handleMixin(_ mixin: Mixin) {
-        var members = [MemberNode]()
 
-        for member in mixin.members {
+        let members: [MemberNode] = mixin.members.compactMap { member in
 
             switch member {
-
             case .const(let const, _):
-                members.append(handleConst(const))
+                return handleConst(const)
 
             case .regularOperation(let regularOperation, _):
-
-                members.append(handleRegularOperation(regularOperation))
-            case .stringifier(_, _):
-                // TODO: Add support
-                break
+                return handleRegularOperation(regularOperation)
+            case .stringifier:
+                return nil
 
             case .readOnlyAttributeRest(false, let attributeRest, _):
                 let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
                 let name = handleAttributeName(attributeRest.attributeName)
-
-                members.append(ReadWritePropertyNode(name: name, dataType: type, isOverride: false, isStatic: false))
+                return ReadWritePropertyNode(name: name, dataType: type, isOverride: false, isStatic: false)
 
             case .readOnlyAttributeRest(true, let attributeRest, _):
-                  let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
-                  let name = handleAttributeName(attributeRest.attributeName)
-
-                  members.append(ReadonlyPropertyNode(name: name, dataType: type, isStatic: false))
+                let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
+                let name = handleAttributeName(attributeRest.attributeName)
+                return ReadonlyPropertyNode(name: name, dataType: type, isStatic: false)
             }
         }
 
@@ -136,7 +142,7 @@ public class IRGenerator {
 
     func handleEnum(_ enumeration: Enum) {
 
-        ir.registerEnumeration(withTypeName: enumeration.identifier, cases: enumeration.enumValues.map({ $0.string }))
+        ir.registerEnumeration(withTypeName: enumeration.identifier, cases: enumeration.enumValues.map { $0.string })
     }
 
     func handleCallback(_ callback: Callback) {
@@ -158,48 +164,43 @@ public class IRGenerator {
 
     func handleInterface(_ interface: Interface) {
 
-        var members = [MemberNode]()
-
-        for member in interface.members {
+        let members: [MemberNode] = interface.members.compactMap { member in
 
             switch member {
             case .constructor(let arguments, _):
-                members.append(ConstructorNode(className: interface.identifier, parameters: handleArgumentList(arguments)))
+                return ConstructorNode(className: interface.identifier, parameters: handleArgumentList(arguments))
 
             case .const(let const, _):
-                members.append(handleConst(const))
+                return handleConst(const)
 
             case .operation(let operation, _):
-                members.append(handleOperation(operation))
+                return handleOperation(operation)
 
             case .readWriteAttribute(let readWriteAttribute, _):
-
-                members.append(handleReadWriteAttribute(readWriteAttribute))
+                return handleReadWriteAttribute(readWriteAttribute)
 
             case .readOnlyMember(let readOnlyMember, _):
-                members.append(handleReadOnlyMember(readOnlyMember))
+                return handleReadOnlyMember(readOnlyMember)
 
-            case .stringifier(_, _):
+            case .stringifier:
                 // Not required: JSBridgedType conforms to CustomStringConvertible
-                break
+                return nil
 
             case .staticMember(let staticMember, _):
-                if let member = handleStaticMember(staticMember) {
-                    members.append(member)
-                }
+                return handleStaticMember(staticMember)
 
             case .iterable(let iterable, _):
-                members.append(handleIterable(iterable))
+                return handleIterable(iterable)
 
-            case .asyncIterable(_, _),
-                 .readWriteMaplike(_, _),
-                 .readWriteSetlike(_, _):
+            case .asyncIterable,
+                 .readWriteMaplike,
+                 .readWriteSetlike:
                 // Not implemented yet.
-                break
+                return nil
             }
         }
 
-        let inheritsFrom: Set<NodePointer> = interface.inheritance.map({ Set([ir.registerIdentifier(withTypeName: $0.identifier)]) }) ?? []
+        let inheritsFrom: Set<NodePointer> = interface.inheritance.map { Set([ir.registerIdentifier(withTypeName: $0.identifier)]) } ?? []
 
         ir.registerClass(withTypeName: interface.identifier, inheritsFrom: inheritsFrom, members: members)
     }
@@ -221,33 +222,35 @@ public class IRGenerator {
             }
         }
 
-        ir.registerProtocol(withTypeName: callbackInterface.identifer, inheritsFrom:  [], requiredMembers: requiredMembers, defaultImplementations: defaultImplementations)
+        ir.registerProtocol(withTypeName: callbackInterface.identifer, inheritsFrom: [], requiredMembers: requiredMembers, defaultImplementations: defaultImplementations)
     }
 
     func handleTypedef(_ typedef: Typedef) {
 
         let dataType = handleDataType(typedef.dataType)
-        _ = ir.registerAliasNode(withTypeName: typedef.identifier, aliasing: dataType.node!)
+        _ = ir.registerAliasNode(withTypeName: typedef.identifier, aliasing: unwrapNode(dataType))
     }
 
     func handleUnionMemberTypes(_ members: [UnionMemberType]) -> NodePointer {
 
         var visitedTypes = [NodePointer]()
-        let typeName: String = members.map({
-            let type: NodePointer
-            switch $0 {
-            case .distinguishableType(_, let distinguishableType):
-                type = handleDistinguishableType(distinguishableType)
+        let typeName: String = members
+            .map {
+                let type: NodePointer
+                switch $0 {
+                case .distinguishableType(_, let distinguishableType):
+                    type = handleDistinguishableType(distinguishableType)
 
-            case .nullableUnionType(let members, true):
-                type = insertOptional(for: handleUnionMemberTypes(members))
-                
-            case .nullableUnionType(let members, false):
-                type = handleUnionMemberTypes(members)
-            }
-            visitedTypes.append(type)
+                case .nullableUnionType(let members, true):
+                    type = insertOptional(for: handleUnionMemberTypes(members))
+
+                case .nullableUnionType(let members, false):
+                    type = handleUnionMemberTypes(members)
+                }
+                visitedTypes.append(type)
                 return type.identifier
-            }).joined(separator: "Or")
+            }
+            .joined(separator: "Or")
 
         let nodePointer = ir.registerEnumerationWithAssociatedValues(withTypeName: typeName, cases: visitedTypes)
         
@@ -256,20 +259,19 @@ public class IRGenerator {
 
     func handleStringType(_ stringType: StringType) -> NodePointer {
 
-        return ir.registerBasicType(withTypeName: "String")
+        ir.registerBasicType(withTypeName: "String")
     }
 
     func handleDataType(_ dataType: DataType) -> NodePointer {
 
         switch dataType {
-
         case .single(let singleType):
             return handleSingleType(singleType)
 
         case .union(let members, let isNullable):
             let nodePointer = handleUnionMemberTypes(members)
             if isNullable {
-               return insertOptional(for: nodePointer)
+                return insertOptional(for: nodePointer)
             }
             return nodePointer
         }
@@ -278,7 +280,6 @@ public class IRGenerator {
     func handleSingleType(_ singleType: SingleType) -> NodePointer {
 
         switch singleType {
-
         case .distinguishableType(let  distinguishableType):
             return handleDistinguishableType(distinguishableType)
         case .any:
@@ -290,6 +291,7 @@ public class IRGenerator {
         }
     }
 
+    // swiftlint:disable cyclomatic_complexity function_body_length
     func handleDistinguishableType(_ distinguishableType: DistinguishableType) -> NodePointer {
 
         func handleBufferRelated(_ name: String, _ isNullable: Bool) -> NodePointer {
@@ -348,8 +350,8 @@ public class IRGenerator {
             }
             return nodePointer
 
-        case .symbol(_):
-            break
+        case .symbol:
+            fatalError("Unsupported symbole type")
 
         case .bufferRelated(.DataView, let isNullable):
             return handleBufferRelated("DataView", isNullable)
@@ -375,7 +377,7 @@ public class IRGenerator {
             return handleBufferRelatedWithScalarType("Float32Array", "Float", isNullable)
         case .bufferRelated(.Float64Array, let isNullable):
             return handleBufferRelatedWithScalarType("Float64Array", "Double", isNullable)
-        case .frozenArray(let typeWithExtendedAttributes,  let isNullable):
+        case .frozenArray(let typeWithExtendedAttributes, let isNullable):
             let type = handleDataType(typeWithExtendedAttributes.dataType)
             let name = "\(type.identifier)Array"
             let arrayNode = ArrayNode(element: type)
@@ -388,18 +390,13 @@ public class IRGenerator {
         case .record(let record, _):
             return handleRecordType(record)
         }
-        fatalError()
     }
+    // swiftlint:enable cyclomatic_complexity function_body_length
 
     func handleRecordType(_ recordType: RecordType) -> NodePointer {
 
         let valueType = handleDataType(recordType.typeWithExtendedAttributes.dataType)
         let name = "\(valueType.identifier)Record"
-
-//        guard let keyNode =  typeHierarchy["String"]?.node,
-//            let valueNode = valueType.node else {
-//                fatalError("Usage of unregistered type")
-//        }
         let recordNode = RecordNode(value: valueType)
         let aliasPointer = ir.registerAliasNode(withTypeName: name, aliasing: recordNode)
         return aliasPointer
@@ -423,36 +420,33 @@ public class IRGenerator {
 
     func handleIdentifier(_ identifier: String) -> NodePointer {
 
-        return ir.registerIdentifier(withTypeName: identifier)
+        ir.registerIdentifier(withTypeName: identifier)
     }
 
     func handleReadOnlyMember(_ readOnlyMember: ReadOnlyMember) -> ReadonlyPropertyNode {
 
         switch readOnlyMember {
-
         case .attribute(let attribute):
-
-            let name = attribute.attributeName.codeRepresentation
+            let name = handleAttributeName(attribute.attributeName)
             let type = handleDataType(attribute.typeWithExtendedAttributes.dataType)
 
             return ReadonlyPropertyNode(name: name, dataType: type, isStatic: false)
 
-        case .maplike(_):
-            fatalError()
-        case .setlike(_):
-            fatalError()
+        case .maplike:
+            fatalError("Not implemented yet.")
+        case .setlike:
+            fatalError("Not implemented yet.")
         }
     }
 
     func handleConst(_ const: Const) -> ConstantPropertyNode {
 
-        return ConstantPropertyNode(name: const.identifier, dataType: handleConstType(const.constType), value: handleConstValue(const.constValue))
+        ConstantPropertyNode(name: const.identifier, dataType: handleConstType(const.constType), value: handleConstValue(const.constValue))
     }
 
     func handleConstType(_ constType: ConstType) -> NodePointer {
 
         switch constType {
-
         case .identifier(let identifier):
             return handleIdentifier(identifier)
         case .primitiveType(let primitiveType):
@@ -463,7 +457,6 @@ public class IRGenerator {
     func handleConstValue(_ constValue: ConstValue) -> String {
 
         switch constValue {
-
         case .booleanLiteral(true):
             return "true"
         case .booleanLiteral(false):
@@ -484,7 +477,6 @@ public class IRGenerator {
     func handleDefaultValue(_ defaultValue: DefaultValue) -> String {
 
         switch defaultValue {
-
         case .constValue(let constValue):
             return handleConstValue(constValue)
         case .string(let string):
@@ -501,7 +493,6 @@ public class IRGenerator {
     func handleOperation(_ operation: Operation) -> MemberNode {
 
         switch operation {
-
         case .regular(let regularOperation):
             return handleRegularOperation(regularOperation)
         case .special(let special, let regularOperation):
@@ -523,18 +514,30 @@ public class IRGenerator {
 
     func handleArgumentList(_ argumentList: [Argument]) -> [ParameterNode] {
 
-        return argumentList.map { (argument) -> ParameterNode in
+        argumentList.map { argument -> ParameterNode in
 
             switch argument.rest {
             case .optional(let typeWithExtendedAttributes, let label, .some(let defaultValue)):
                 let dataType = handleDataType(typeWithExtendedAttributes.dataType)
-                return ParameterNode(label: label.codeRepresentation, dataType: dataType, isVariadic: false, isOmittable: true, defaultValue: DefaultValueNode(dataType: dataType, value: handleDefaultValue(defaultValue)))
+                return ParameterNode(label: handleArgumentName(label),
+                                     dataType: dataType,
+                                     isVariadic: false,
+                                     isOmittable: true,
+                                     defaultValue: DefaultValueNode(dataType: dataType, value: handleDefaultValue(defaultValue)))
 
             case .optional(let typeWithExtendedAttributes, let label, .none):
-                return ParameterNode(label: label.codeRepresentation, dataType: handleDataType(typeWithExtendedAttributes.dataType), isVariadic: false, isOmittable: true, defaultValue: nil)
+                return ParameterNode(label: handleArgumentName(label),
+                                     dataType: handleDataType(typeWithExtendedAttributes.dataType),
+                                     isVariadic: false,
+                                     isOmittable: true,
+                                     defaultValue: nil)
 
             case .nonOptional(let dataType, let ellipsis, let label):
-                return ParameterNode(label: label.codeRepresentation, dataType: handleDataType(dataType), isVariadic: ellipsis, isOmittable: ellipsis, defaultValue: nil)
+                return ParameterNode(label: handleArgumentName(label),
+                                     dataType: handleDataType(dataType),
+                                     isVariadic: ellipsis,
+                                     isOmittable: ellipsis,
+                                     defaultValue: nil)
             }
         }
     }
@@ -547,7 +550,7 @@ public class IRGenerator {
 
             return MethodNode(name: name, returnType: returnType, parameters: handleArgumentList(regularOperation.argumentList))
         } else {
-            fatalError()
+            fatalError("Regular Operations without name are not supported.")
         }
     }
 
@@ -558,11 +561,12 @@ public class IRGenerator {
             return identifier
 
         case .includes:
-            fatalError()
+            fatalError("includes OperationName not supported.")
         }
     }
 
     func handleReturnType(_ returnType: ReturnType) -> NodePointer {
+
         switch returnType {
         case .void:
             return ir.registerBasicType(withTypeName: "Void")
@@ -573,6 +577,7 @@ public class IRGenerator {
     }
 
     func handleUnsignedIntegerType(_ integerType: UnsignedIntegerType) -> NodePointer {
+
         guard !useSimpleTypes else {
             return ir.registerBasicType(withTypeName: "Int32")
         }
@@ -600,7 +605,7 @@ public class IRGenerator {
 
     func handleUnrestrictedFloatType(_ unrestrictedFloatType: UnrestrictedFloatType) -> NodePointer {
 
-        // TODO: No unrestricted handling
+        // No unrestricted handling
         switch unrestrictedFloatType {
         case .unrestricted(let floatType), .restricted(let floatType):
             return handleFloatType(floatType)
@@ -611,7 +616,6 @@ public class IRGenerator {
 
         guard !useSimpleTypes else {
             return ir.registerBasicType(withTypeName: "Double")
-
         }
 
         switch floatType {
@@ -670,7 +674,6 @@ public class IRGenerator {
     func handleStaticMember(_ staticMember: StaticMember) -> MemberNode? {
 
         switch staticMember {
-
         case .readOnlyAttributeRest(false, let attributeRest):
             let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
             let name = handleAttributeName(attributeRest.attributeName)
@@ -683,29 +686,15 @@ public class IRGenerator {
 
             return ReadonlyPropertyNode(name: name, dataType: type, isStatic: true)
             
-        case .regularOperation(let operation):
+        case .regularOperation:
             // Not supported. Cannot be looked up
             return nil
         }
     }
-}
 
-extension ArgumentName {
+    func handleArgumentName(_ argumentName: ArgumentName) -> String {
 
-    var swiftKeyWords: [String : String] { [
-        "init" : "`init`",
-        "where" : "`where`",
-        "protocol" : "`protocol`",
-        "struct" : "`struct`",
-        "class" : "`class`",
-        "enum" : "`enum`",
-        "func" : "`func`",
-        "static" : "`static`",
-        ]
-    }
-
-    var codeRepresentation: String {
-        switch self {
+        switch argumentName {
         case .identifier(let identifier):
             return swiftKeyWords[identifier] ?? identifier
         case .argumentNameKeyword(let keyword):
@@ -713,13 +702,4 @@ extension ArgumentName {
         }
     }
 }
-
-extension AttributeName {
-
-    var codeRepresentation: String {
-        switch self {
-        case .attributeNameKeyword(let keyword): return keyword.rawValue
-        case .identifier(let identifier): return identifier
-        }
-    }
-}
+// swiftlint:enable type_body_length file_length

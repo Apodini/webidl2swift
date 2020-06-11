@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -26,6 +29,7 @@ public struct GenerateCode: ParsableCommand {
 
     public init() {}
 
+    // swiftlint:disable function_body_length
     public func run() throws {
 
         if verbose {
@@ -55,13 +59,14 @@ public struct GenerateCode: ParsableCommand {
         let formatter = SwiftFormatter(configuration: configuration)
 
         let codeGenerator = IRGenerator()
+        // swiftlint:disable:next identifier_name
         let ir = codeGenerator.generateIR(for: definitions)
 
         let undefinedTypes = ir.undefinedTypes
 
         guard undefinedTypes.isEmpty else {
             print("Error: The following types are undefined:")
-            print(undefinedTypes.map({"\t- \($0.0)"}).joined(separator: "\n"))
+            print(undefinedTypes.map { "\t- \($0.0)" }.joined(separator: "\n"))
             Self.exit(withError: ExitCode.failure)
         }
 
@@ -107,15 +112,16 @@ public struct GenerateCode: ParsableCommand {
 
         try Data(packageSwift.utf8).write(to: packageDirectory.appendingPathComponent("Package.swift"), options: .atomicWrite)
 
-        let swiftDeclarations: [(String, String)] = ir.sorted(by: { $0.key < $1.key })
-            .map({ (k, v) in
+        let swiftDeclarations: [(String, String)] = ir
+            .sorted { $0.key < $1.key }
+            .map { key, value in
 
-                return (k, v.node!.swiftDeclaration)
-            })
-            .filter({ !$0.1.isEmpty })
+                (key, unwrapNode(value).swiftDeclaration)
+            }
+            .filter { !$0.1.isEmpty }
 
         if createSeparateFiles {
-            DispatchQueue.concurrentPerform(iterations: swiftDeclarations.count) { (index) in
+            DispatchQueue.concurrentPerform(iterations: swiftDeclarations.count) { index in
 
                 let declaration = swiftDeclarations[index]
                 let name = declaration.0
@@ -140,7 +146,9 @@ public struct GenerateCode: ParsableCommand {
                 }
             }
         } else {
-            let generated = preamble + swiftDeclarations.map({ $0.1 }).joined(separator: "\n\n")
+            let generated = preamble + swiftDeclarations
+                .map { $0.1 }
+                .joined(separator: "\n\n")
             var output = ""
             if prettyPrint {
                 try formatter.format(source: generated, assumingFileURL: nil, to: &output)
@@ -152,4 +160,5 @@ public struct GenerateCode: ParsableCommand {
             try data.write(to: sourcesDirectory.appendingPathComponent("WebAPI.swift"), options: .atomicWrite)
         }
     }
+    // swiftlint:enable function_body_length
 }

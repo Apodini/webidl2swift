@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -10,11 +13,11 @@ class RecordNode: TypeNode, Equatable {
     }
 
     var isRecord: Bool {
-        return true
+        true
     }
 
     var swiftTypeName: String {
-        return "[String : \(value.node!.swiftTypeName)]"
+        "[String : \(unwrapNode(value).swiftTypeName)]"
     }
 
     var swiftDeclaration: String {
@@ -22,10 +25,10 @@ class RecordNode: TypeNode, Equatable {
     }
 
     func typeCheck(withArgument argument: String) -> String {
-         return "case .object = \(argument)"
+         "case .object = \(argument)"
     }
 
     static func == (lhs: RecordNode, rhs: RecordNode) -> Bool {
-        return lhs.value == rhs.value
+        lhs.value == rhs.value
     }
 }

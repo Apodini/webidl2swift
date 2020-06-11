@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -10,38 +13,38 @@ class OptionalNode: TypeNode, Equatable {
     }
 
     var isOptional: Bool {
-        return true
+        true
     }
 
     var isClosure: Bool {
-        return wrapped.node!.isClosure
+        unwrapNode(wrapped).isClosure
     }
 
     var isProtocol: Bool {
-        return wrapped.node!.isProtocol
+        unwrapNode(wrapped).isProtocol
     }
 
     var swiftTypeName: String {
-        return "\(wrapped.node!.swiftTypeName)?"
+        "\(unwrapNode(wrapped).swiftTypeName)?"
     }
 
     var swiftDeclaration: String {
-        return ""
+        ""
     }
 
     var nonOptionalTypeName: String {
-        return wrapped.node!.nonOptionalTypeName
+        unwrapNode(wrapped).nonOptionalTypeName
     }
 
     var typeErasedSwiftType: String {
-        return wrapped.node!.typeErasedSwiftType + "?"
+        unwrapNode(wrapped).typeErasedSwiftType + "?"
     }
 
     var numberOfClosureArguments: Int {
-        wrapped.node!.numberOfClosureArguments
+        unwrapNode(wrapped).numberOfClosureArguments
     }
 
     static func == (lhs: OptionalNode, rhs: OptionalNode) -> Bool {
-        return lhs.wrapped == rhs.wrapped
+        lhs.wrapped == rhs.wrapped
     }
 }

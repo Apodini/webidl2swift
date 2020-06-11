@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -16,7 +19,7 @@ class ClassNode: TypeNode, Equatable {
 
     var swiftTypeName: String {
 
-        return typeName
+        typeName
     }
 
     var isClass: Bool { true }
@@ -25,9 +28,11 @@ class ClassNode: TypeNode, Equatable {
 
         let context = MemberNodeContext.classContext(typeName)
 
-        let (namedSubscript, indexedSubscript) = SubscriptNode.mergedSubscriptNodes( members.filter({ $0.isSubscript }) as! [SubscriptNode])
+        // swiftlint:disable force_cast
+        let (namedSubscript, indexedSubscript) = SubscriptNode.mergedSubscriptNodes( members.filter { $0.isSubscript } as! [SubscriptNode])
+        // swiftlint:enable force_cast
 
-        let propertyNodes = members.compactMap({ $0 as? PropertyNode })
+        let propertyNodes = members.compactMap { $0 as? PropertyNode }
 
         var declaration: String
 
@@ -36,9 +41,12 @@ class ClassNode: TypeNode, Equatable {
 
         let sorted = inheritsFrom.sorted {
 
-            if $0.node!.isClass && !$1.node!.isClass {
+            let firstNode = unwrapNode($0)
+            let secondNode = unwrapNode($1)
+
+            if firstNode.isClass && !secondNode.isClass {
                 return true
-            } else if !$0.node!.isClass && $1.node!.isClass {
+            } else if !firstNode.isClass && secondNode.isClass {
                 return false
             } else {
                 return $0.identifier < $1.identifier
@@ -47,12 +55,12 @@ class ClassNode: TypeNode, Equatable {
 
         let adoptedProtocols = members.flatMap { $0.adoptedProtocols }
 
-        if let first = sorted.first, first.node!.isClass {
+        if let first = sorted.first, unwrapNode(first).isClass {
             isBaseClass = false
-            inheritance = (sorted.map({ $0.node!.swiftTypeName }) + adoptedProtocols).joined(separator: ", ")
+            inheritance = (sorted.map { unwrapNode($0).swiftTypeName } + adoptedProtocols).joined(separator: ", ")
         } else {
             isBaseClass = true
-            inheritance = (["JSBridgedType"] + sorted.map({ $0.node!.swiftTypeName }) + adoptedProtocols).joined(separator: ", ")
+            inheritance = (["JSBridgedType"] + sorted.map { unwrapNode($0).swiftTypeName } + adoptedProtocols).joined(separator: ", ")
         }
 
         if isBaseClass {
@@ -64,7 +72,7 @@ class ClassNode: TypeNode, Equatable {
                 public let objectRef: JSObjectRef
 
                 public required init(objectRef: JSObjectRef) {
-                    \(propertyNodes.compactMap({ $0.initializationStatement(forContext: context) }).joined(separator: "\n"))
+                    \(propertyNodes.compactMap { $0.initializationStatement(forContext: context) }.joined(separator: "\n"))
                     self.objectRef = objectRef
                 }
 
@@ -76,7 +84,7 @@ class ClassNode: TypeNode, Equatable {
                 public override class var classRef: JSFunctionRef { JSObjectRef.global.\(typeName).function! }
 
                 public required init(objectRef: JSObjectRef) {
-                    \(propertyNodes.compactMap({ $0.initializationStatement(forContext: context) }).joined(separator: "\n"))
+                    \(propertyNodes.compactMap { $0.initializationStatement(forContext: context) }.joined(separator: "\n"))
                     super.init(objectRef: objectRef)
                 }
 
@@ -84,20 +92,18 @@ class ClassNode: TypeNode, Equatable {
         }
 
         declaration += "\n"
-        members.forEach { declaration += $0.typealiases.joined(separator: "\n")}
+        members.forEach { declaration += $0.typealiases.joined(separator: "\n") }
         declaration += "\n"
 
         declaration += "\n"
-        namedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n")}
+        namedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n") }
         declaration += "\n"
-        indexedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n")}
+        indexedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n") }
         declaration += "\n"
 
         declaration += members
-            .filter({ !$0.isSubscript })
-            .flatMap({
-                return $0.swiftImplementations(inContext: context)
-            })
+            .filter { !$0.isSubscript }
+            .flatMap { $0.swiftImplementations(inContext: context) }
             .joined(separator: "\n\n")
 
         declaration += "\n}"
@@ -107,10 +113,10 @@ class ClassNode: TypeNode, Equatable {
 
     func typeCheck(withArgument argument: String) -> String {
 
-        return "\(argument).instanceOf(\"\(typeName)\")"
+        "\(argument).instanceOf(\"\(typeName)\")"
     }
 
     static func == (lhs: ClassNode, rhs: ClassNode) -> Bool {
-        return lhs.typeName == rhs.typeName
+        lhs.typeName == rhs.typeName
     }
 }

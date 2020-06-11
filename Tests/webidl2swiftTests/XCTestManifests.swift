@@ -1,3 +1,7 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
+
 import XCTest
 
 #if !canImport(ObjectiveC)

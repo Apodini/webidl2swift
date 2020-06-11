@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -12,9 +15,10 @@ class ConstructorNode: MemberNode, Equatable {
     }
 
     var isConstructor: Bool {
-        return true
+        true
     }
 
+    // swiftlint:disable function_body_length cyclomatic_complexity
     private func _swiftDeclaration(inContext: MemberNodeContext, withImplementation: Bool) -> [String] {
 
         var declarations = [String]()
@@ -37,7 +41,7 @@ class ConstructorNode: MemberNode, Equatable {
 
             for parameter in parameters {
 
-                let dataTypeNode = parameter.dataType.node!
+                let dataTypeNode = unwrapNode(parameter.dataType)
                 var type: String
                 if dataTypeNode.isProtocol {
                     if dataTypeNode.isOptional {
@@ -62,9 +66,10 @@ class ConstructorNode: MemberNode, Equatable {
                     if let enumNode = defaultValue.dataType.node as? EnumerationWithRawValueNode {
                         let trimmedDefaultValue = defaultValue.value.trimmingCharacters(in: CharacterSet(charactersIn: "\""))
                         if enumNode.cases.contains(trimmedDefaultValue) {
+                            // swiftlint:disable:next force_unwrapping
                             value = "." + String(trimmedDefaultValue.first!.lowercased() + trimmedDefaultValue.dropFirst())
                         } else {
-                            fatalError()
+                            fatalError("Invalid default value \(trimmedDefaultValue) for enum \(defaultValue.dataType.identifier)")
                         }
                     } else {
                         value = defaultValue.value
@@ -86,7 +91,7 @@ class ConstructorNode: MemberNode, Equatable {
             if withImplementation {
 
                 let passedParameters: [String] = parameters.map {
-                    let dataTypeNode = $0.dataType.node!
+                    let dataTypeNode = unwrapNode($0.dataType)
                     if dataTypeNode.isClosure {
 
                         let closureNode: ClosureNode
@@ -97,21 +102,21 @@ class ConstructorNode: MemberNode, Equatable {
                         } else if let aliasNode = dataTypeNode as? AliasNode, let optionalNode = aliasNode.aliased as? OptionalNode, let cNode = optionalNode.wrapped.node as? ClosureNode {
                             closureNode = cNode
                         } else {
-                            fatalError()
+                            fatalError("Unknown closure type.")
                         }
 
-                        let rt: String
+                        let returnValue: String
                         if closureNode.returnType.identifier == "Void" {
-                            rt = "; return .undefined"
+                            returnValue = "; return .undefined"
                         } else {
-                            rt = ".fromJSValue()"
+                            returnValue = ".fromJSValue()"
                         }
 
                         let argumentCount = closureNode.arguments.count
-                        let closureArguments = (0 ..< argumentCount).map {
-                            "$0[\($0)].fromJSValue()"
-                        }.joined(separator: ", ")
-                        return "JSFunctionRef.from({ \($0.label)(\(closureArguments))\(rt) })"
+                        let closureArguments = (0 ..< argumentCount)
+                            .map { "$0[\($0)].fromJSValue()" }
+                            .joined(separator: ", ")
+                        return "JSFunctionRef.from({ \($0.label)(\(closureArguments))\(returnValue) })"
                     } else {
                         return $0.label + ".jsValue()"
                     }
@@ -133,18 +138,19 @@ class ConstructorNode: MemberNode, Equatable {
 
         return declarations
     }
+    // swiftlint:enable function_body_length cyclomatic_complexity
 
     func swiftDeclarations(inContext: MemberNodeContext) -> [String] {
 
-        return _swiftDeclaration(inContext: inContext, withImplementation: false)
+        _swiftDeclaration(inContext: inContext, withImplementation: false)
     }
 
     func swiftImplementations(inContext: MemberNodeContext) -> [String] {
 
-        return _swiftDeclaration(inContext: inContext, withImplementation: true)
+        _swiftDeclaration(inContext: inContext, withImplementation: true)
     }
 
     static func == (lhs: ConstructorNode, rhs: ConstructorNode) -> Bool {
-        return lhs.className == rhs.className && (lhs.parameters.count == rhs.parameters.count && zip(lhs.parameters, rhs.parameters).allSatisfy(equal))
+        lhs.className == rhs.className && (lhs.parameters.count == rhs.parameters.count && zip(lhs.parameters, rhs.parameters).allSatisfy(equal))
     }
 }

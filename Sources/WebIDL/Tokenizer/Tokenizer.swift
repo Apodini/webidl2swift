@@ -1,60 +1,10 @@
-
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
-public enum Token: Equatable, Hashable, CustomStringConvertible {
-
-    case terminal(Terminal)
-
-    case integer                    //  =   /-?([1-9][0-9]*|0[Xx][0-9A-Fa-f]+|0[0-7]*)/
-    case decimal                    //  =   /-?(([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([Ee][+-]?[0-9]+)?|[0-9]+[Ee][+-]?[0-9]+)/
-    case identifier                 //  =   /[_-]?[A-Za-z][0-9A-Z_a-z-]*/
-    case string                     //  =   /"[^"]*"/
-    case other                      //  =   /[^\t\n\r 0-9A-Za-z]/
-    case comment(String)
-    case multilineComment(String)
-
-    public var description: String {
-
-        switch self {
-
-        case .terminal(let terminal):
-            return ".terminal(\(terminal.description))"
-        case .integer:
-            return ".integer"
-        case .decimal:
-            return ".decimal"
-        case .identifier:
-            return ".identifer"
-        case .string:
-            return ".string"
-        case .other:
-            return ".other"
-        case .comment(_):
-            return ".comment"
-        case .multilineComment: 
-            return ".multilineComment"
-        }
-    }
-}
-
-enum State {
-
-    case regular
-    case identifier
-    case integerLiteral
-    case hexLiteral
-    case decimalLiteral
-    case stringLiteral
-    case escapedChar
-    case startOfComment
-    case comment
-    case startOfEllipsis
-    case ellipsis
-    case multilineComment
-    case maybeEndOfMultilineComment
-}
-
+///
 public typealias Tokens = [Token]
 
 public struct TokenisationResult: CustomStringConvertible {
@@ -68,14 +18,13 @@ public struct TokenisationResult: CustomStringConvertible {
 
     func merging(_ other: TokenisationResult) -> TokenisationResult {
 
-        return TokenisationResult(tokens: tokens + other.tokens,
-                                  identifiers: identifiers + other.identifiers,
-                                  integers: integers + other.integers,
-                                  decimals: decimals + other.decimals,
-                                  strings: strings + other.strings,
-                                  others: others + other.others)
+        TokenisationResult(tokens: tokens + other.tokens,
+                           identifiers: identifiers + other.identifiers,
+                           integers: integers + other.integers,
+                           decimals: decimals + other.decimals,
+                           strings: strings + other.strings,
+                           others: others + other.others)
     }
-
 
     public var description: String {
 
@@ -120,17 +69,27 @@ extension NSRegularExpression {
     }
 }
 
-public struct Tokenizer {
+// swiftlint:disable type_body_length
+/// `Tokenizer` converts an input string, file, or directory with files into a token stream.
+public enum Tokenizer {
 
+    // swiftlint:disable force_try
     static let integerRegex = try! NSRegularExpression(pattern: #"-?([1-9][0-9]*|0[Xx][0-9A-Fa-f]+|0[0-7]*)"#)
     static let decimalRegex = try! NSRegularExpression(pattern: #"-?(([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([Ee][+-]?[0-9]+)?|[0-9]+[Ee][+-]?[0-9]+)"#)
     static let identifierRegex = try! NSRegularExpression(pattern: #"[_-]?[A-Za-z][0-9A-Z_a-z-]*"#)
     static let otherRegex = try! NSRegularExpression(pattern: #"[^\t\n\r 0-9A-Za-z]"#)
+    // swiftlint:enable force_try
 
+    /// Tokenize all `.webidl` files in the given directory
+    /// - Parameter directoryURL: An URL to a directory that contains `.webidl` files
+    /// - Throws: Any error related to the file operations or the tokenization operation.
+    /// - Returns: A `TokenisationResult` instance containing the token stream for the given files.
     public static func tokenize(filesInDirectoryAt directoryURL: URL) throws -> TokenisationResult? {
 
         var tokenisationResult = TokenisationResult(tokens: [], identifiers: [], integers: [], decimals: [], strings: [], others: [])
-        let files = try FileManager.default.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants, .skipsPackageDescendants])
+        let files = try FileManager.default.contentsOfDirectory(at: directoryURL,
+                                                                includingPropertiesForKeys: nil,
+                                                                options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants, .skipsPackageDescendants])
         for file in files where file.pathExtension == "webidl" {
 
             guard let result = try Tokenizer.tokenize(fileAt: file) else {
@@ -141,6 +100,10 @@ public struct Tokenizer {
         return tokenisationResult
     }
 
+    /// Tokenize a single Web IDL file
+    /// - Parameter fileURL: An URL to a file containing Web IDL definitions.
+    /// - Throws: Any error related to the file operations or the tokenization operation.
+    /// - Returns: A `TokenisationResult` instance containing the token stream for the given file.
     public static func tokenize(fileAt fileURL: URL) throws -> TokenisationResult? {
 
         let fileData = try Data(contentsOf: fileURL)
@@ -150,6 +113,11 @@ public struct Tokenizer {
         return try tokenize(string)
     }
 
+    // swiftlint:disable cyclomatic_complexity function_body_length
+    /// Tokenize Web IDL definitions
+    /// - Parameter string: A string containing Web IDL definitions.
+    /// - Throws: Any error related to the file operations or the tokenization operation.
+    /// - Returns: A `TokenisationResult` instance containing the token stream for the given file.
     public static func tokenize(_ string: String) throws -> TokenisationResult {
 
         var tokens = Tokens()
@@ -169,6 +137,7 @@ public struct Tokenizer {
         var others: [String] = []
 
         func appendIntegerLiteral() {
+            defer { reset() }
             guard let integer = Int(buffer) else {
                 return
             }
@@ -177,6 +146,7 @@ public struct Tokenizer {
         }
 
         func appendHexLiteral() {
+            defer { reset() }
             guard let integer = Int(buffer, radix: 16) else {
                 return
             }
@@ -185,6 +155,7 @@ public struct Tokenizer {
         }
 
         func appendDecimalLiteral() {
+            defer { reset() }
             guard let double = Double(buffer) else {
                 return
             }
@@ -210,15 +181,13 @@ public struct Tokenizer {
             } else {
                 print("Undefined sequence: \(buffer)")
             }
-
-            buffer = ""
+            reset()
         }
 
-        for (_, character) in string.enumerated() {
+        for character in string {
 
             switch (state, character) {
             case (.identifier, "["):
-                state = .regular
                 appendIdentifier()
                 tokens.append(.terminal(.openingSquareBracket))
 
@@ -226,39 +195,35 @@ public struct Tokenizer {
                 tokens.append(.terminal(.openingSquareBracket))
 
             case (.identifier, "]"):
-                state = .regular
                 appendIdentifier()
                 fallthrough
+
             case (.regular, "]"):
                 tokens.append(.terminal(.closingSquareBracket))
 
             case (.identifier, "("):
-                state = .regular
                 appendIdentifier()
                 fallthrough
+
             case (.regular, "("):
                 tokens.append(.terminal(.openingParenthesis))
 
             case (.identifier, ")"):
-                state = .regular
                 appendIdentifier()
                 tokens.append(.terminal(.closingParenthesis))
 
             case (.integerLiteral, ")"):
                 appendIntegerLiteral()
                 tokens.append(.terminal(.closingParenthesis))
-                reset()
 
             case (.hexLiteral, ")"):
                 appendHexLiteral()
                 tokens.append(.terminal(.closingParenthesis))
-                reset()
 
             case (.regular, ")"):
                 tokens.append(.terminal(.closingParenthesis))
 
             case (.identifier, "<"):
-                state = .regular
                 appendIdentifier()
                 tokens.append(.terminal(.openingAngleBracket))
 
@@ -266,7 +231,6 @@ public struct Tokenizer {
                 tokens.append(.terminal(.openingAngleBracket))
 
             case (.identifier, ">"):
-                state = .regular
                 appendIdentifier()
                 tokens.append(.terminal(.closingAngleBracket))
 
@@ -274,7 +238,6 @@ public struct Tokenizer {
                 tokens.append(.terminal(.closingAngleBracket))
 
             case (.identifier, "{"):
-                state = .regular
                 appendIdentifier()
                 tokens.append(.terminal(.openingCurlyBraces))
 
@@ -282,7 +245,6 @@ public struct Tokenizer {
                 tokens.append(.terminal(.openingCurlyBraces))
 
             case (.identifier, "}"):
-                state = .regular
                 appendIdentifier()
                 tokens.append(.terminal(.closingCurlyBraces))
 
@@ -290,7 +252,6 @@ public struct Tokenizer {
                 tokens.append(.terminal(.closingCurlyBraces))
 
             case (.identifier, "?"):
-                state = .regular
                 appendIdentifier()
                 tokens.append(.terminal(.questionMark))
 
@@ -298,7 +259,6 @@ public struct Tokenizer {
                 tokens.append(.terminal(.questionMark))
 
             case (.identifier, "="):
-                state = .regular
                 appendIdentifier()
                 tokens.append(.terminal(.equalSign))
 
@@ -306,24 +266,20 @@ public struct Tokenizer {
                 tokens.append(.terminal(.equalSign))
 
             case (.identifier, ","):
-                state = .regular
                 appendIdentifier()
                 tokens.append(.terminal(.comma))
 
             case (.integerLiteral, ","):
                 appendIntegerLiteral()
                 tokens.append(.terminal(.comma))
-                reset()
 
             case (.hexLiteral, ","):
                 appendHexLiteral()
                 tokens.append(.terminal(.comma))
-                reset()
 
             case (.decimalLiteral, ","):
                 appendDecimalLiteral()
                 tokens.append(.terminal(.comma))
-                reset()
 
             case (.regular, ","):
                 tokens.append(.terminal(.comma))
@@ -331,12 +287,10 @@ public struct Tokenizer {
             case (.identifier, ";"):
                 appendIdentifier()
                 tokens.append(.terminal(.semicolon))
-                reset()
 
             case (.integerLiteral, ";"):
                 appendIntegerLiteral()
                 tokens.append(.terminal(.semicolon))
-                reset()
 
             case (.integerLiteral, "."):
                 state = .decimalLiteral
@@ -345,25 +299,20 @@ public struct Tokenizer {
             case (.hexLiteral, ";"):
                 appendHexLiteral()
                 tokens.append(.terminal(.semicolon))
-                reset()
 
             case (.decimalLiteral, ";"):
                 appendDecimalLiteral()
                 tokens.append(.terminal(.semicolon))
-                reset()
-
 
             case (.regular, ";"):
                 tokens.append(.terminal(.semicolon))
 
             case (.identifier, ":"):
-                state = .regular
                 appendIdentifier()
                 tokens.append(.terminal(.colon))
 
             case (.identifier, "."):
                 appendIdentifier()
-                reset()
                 state = .startOfEllipsis
 
             case (.regular, ":"):
@@ -384,9 +333,9 @@ public struct Tokenizer {
                 reset()
 
             case (.ellipsis, let char) where char.isWhitespace || char.isNewline:
-            tokens.append(.terminal(.dot))
-            tokens.append(.terminal(.dot))
-            reset()
+                tokens.append(.terminal(.dot))
+                tokens.append(.terminal(.dot))
+                reset()
 
             case (.integerLiteral, let char) where buffer.count == 1 && char.lowercased() == "x":
                 state = .hexLiteral
@@ -408,8 +357,8 @@ public struct Tokenizer {
 
             case (.decimalLiteral, "e") where !buffer.contains("e"),
                  (.decimalLiteral, "E") where !buffer.contains("e"),
-                (.integerLiteral, "e") where !buffer.contains("e"),
-                (.integerLiteral, "E") where !buffer.contains("e"):
+                 (.integerLiteral, "e") where !buffer.contains("e"),
+                 (.integerLiteral, "E") where !buffer.contains("e"):
                 state = .decimalLiteral
                 buffer.append("e")
                 
@@ -418,15 +367,12 @@ public struct Tokenizer {
 
             case (.integerLiteral, let char) where char.isWhitespace || char.isNewline:
                 appendIntegerLiteral()
-                reset()
 
             case (.hexLiteral, let char) where char.isWhitespace || char.isNewline:
                 appendHexLiteral()
-                reset()
 
             case (.decimalLiteral, let char) where char.isWhitespace || char.isNewline:
                 appendDecimalLiteral()
-                reset()
 
             case (.regular, "/"):
                 state = .startOfComment
@@ -437,14 +383,11 @@ public struct Tokenizer {
 
             case (.comment, let char):
                 if buffer.isEmpty, char.isWhitespace { continue }
-
                 if char.isNewline {
                     tokens.append(.comment(buffer))
-                    state = .regular
-                    buffer = ""
+                    reset()
                     continue
                 }
-
                 buffer.append(char)
 
             case (.startOfComment, "*"):
@@ -456,8 +399,7 @@ public struct Tokenizer {
 
             case (.maybeEndOfMultilineComment, "/"):
                 tokens.append(.multilineComment(buffer))
-                state = .regular
-                buffer = ""
+                reset()
 
             case (.maybeEndOfMultilineComment, "*"):
                 buffer.append("*")
@@ -468,16 +410,14 @@ public struct Tokenizer {
                 buffer.append(char)
 
             case (.multilineComment, let char):
-                 buffer.append(char)
+                buffer.append(char)
 
             case (.regular, let char) where char.isLetter || "_" == char:
                 state = .identifier
                 buffer.append(char)
 
             case (.identifier, let char) where char.isWhitespace || char.isNewline:
-                state = .regular
                 appendIdentifier()
-                buffer = ""
 
             case (.identifier, let char) where char.isLetter || ["_", "-"].contains(char) || char.isNumber:
                 buffer.append(char)
@@ -493,10 +433,9 @@ public struct Tokenizer {
                 state = .stringLiteral
 
             case (.stringLiteral, "\""):
-                state = .regular
                 tokens.append(.string)
                 strings.append(buffer)
-                buffer = ""
+                reset()
 
             case (.stringLiteral, let char):
                 buffer.append(char)
@@ -521,14 +460,12 @@ public struct Tokenizer {
             break
         case .escapedChar:
             break
-        case .startOfComment:
-            break
         case .comment:
             tokens.append(.comment(buffer))
         case .multilineComment:
             tokens.append(.multilineComment(buffer))
         case .startOfComment, .maybeEndOfMultilineComment:
-            fatalError()
+            fatalError("Unterminated start of comment")
         case .startOfEllipsis:
             tokens.append(.terminal(.dot))
         case .ellipsis:
@@ -537,4 +474,6 @@ public struct Tokenizer {
 
         return TokenisationResult(tokens: tokens, identifiers: identifiers, integers: integers, decimals: decimals, strings: strings, others: others)
     }
+    // swiftlint:enable cyclomatic_complexity function_body_length
 }
+// swiftlint:enable type_body_length

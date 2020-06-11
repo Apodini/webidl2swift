@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -12,43 +15,43 @@ class AliasNode: TypeNode, Equatable {
     }
 
     var isOptional: Bool {
-        return aliased.isOptional
+        aliased.isOptional
     }
 
     var isClosure: Bool {
-        return aliased.isClosure
+        aliased.isClosure
     }
 
     var isEnum: Bool {
-        return aliased.isEnum
+        aliased.isEnum
     }
 
     var isArray: Bool {
-        return aliased.isArray
+        aliased.isArray
     }
 
     var isDictionary: Bool {
-        return aliased.isDictionary
+        aliased.isDictionary
     }
 
     var swiftTypeName: String {
-        return typeName
+        typeName
     }
 
     var isProtocol: Bool {
-        return aliased.isProtocol
+        aliased.isProtocol
     }
 
     var swiftDeclaration: String {
-        return "public typealias \(typeName) = \(aliased.swiftTypeName)"
+        "public typealias \(typeName) = \(aliased.swiftTypeName)"
     }
 
     var nonOptionalTypeName: String {
-        return aliased.nonOptionalTypeName
+        aliased.nonOptionalTypeName
     }
 
     var typeErasedSwiftType: String {
-        return aliased.typeErasedSwiftType
+        aliased.typeErasedSwiftType
     }
 
     var numberOfClosureArguments: Int {
@@ -57,6 +60,6 @@ class AliasNode: TypeNode, Equatable {
 
     static func == (lhs: AliasNode, rhs: AliasNode) -> Bool {
 
-        return lhs.typeName == rhs.typeName && equal(lhs.aliased, rhs.aliased)
+        lhs.typeName == rhs.typeName && equal(lhs.aliased, rhs.aliased)
     }
 }

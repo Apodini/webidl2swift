@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -12,25 +15,33 @@ class ClosureNode: TypeNode, Equatable {
     }
 
     var isClosure: Bool {
-        return true
+        true
     }
 
-    var numberOfClosureArguments: Int { arguments.count }
+    var numberOfClosureArguments: Int {
+        arguments.count
+    }
 
     var swiftTypeName: String {
 
-        return "((\(arguments.map({ $0.node!.swiftTypeName }).joined(separator: ", "))) -> \(returnType.node!.swiftTypeName))"
+        let argumentDeclarations = arguments.map {
+            unwrapNode($0).swiftTypeName
+        }
+        .joined(separator: ", ")
+        return "((\(argumentDeclarations)) -> \(unwrapNode(returnType).swiftTypeName))"
     }
 
     var swiftDeclaration: String {
-        return ""
+        ""
     }
 
     func typeCheck(withArgument argument: String) -> String {
-        return "false"
+        "false"
     }
 
     static func == (lhs: ClosureNode, rhs: ClosureNode) -> Bool {
-        return lhs.returnType == rhs.returnType && lhs.arguments.count == rhs.arguments.count && lhs.arguments == rhs.arguments
+        lhs.returnType == rhs.returnType &&
+            lhs.arguments.count == rhs.arguments.count &&
+            lhs.arguments == rhs.arguments
     }
 }

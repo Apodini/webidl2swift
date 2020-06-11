@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -12,23 +15,24 @@ class EnumerationWithRawValueNode: TypeNode, Equatable {
     }
 
     var isEnum: Bool {
-        return true
+        true
     }
 
     var swiftTypeName: String {
-        return typeName
+        typeName
     }
 
     var swiftDeclaration: String {
 
-        let casesAndRawValues: [(String, String)] = cases.map({ c in
+        let casesAndRawValues: [(String, String)] = cases.map { theCase in
 
-            guard !c.isEmpty else {
-                return ("empty", c)
+            guard !theCase.isEmpty else {
+                return ("empty", theCase)
             }
-
-            return (String(c.first!.lowercased() + c.dropFirst()), c)
-        })
+            
+            // swiftlint:disable:next force_unwrapping
+            return (String(theCase.first!.lowercased() + theCase.dropFirst()), theCase)
+        }
 
         var declaration = """
         public enum \(typeName): String, JSValueCodable {
@@ -39,7 +43,7 @@ class EnumerationWithRawValueNode: TypeNode, Equatable {
 
         """
 
-        declaration += casesAndRawValues.map({ "case \($0.0) = \"\($0.1)\"" }).joined(separator: "\n")
+        declaration += casesAndRawValues.map { "case \($0.0) = \"\($0.1)\"" }.joined(separator: "\n")
         declaration += """
 
 
@@ -61,11 +65,11 @@ class EnumerationWithRawValueNode: TypeNode, Equatable {
     }
 
     static func == (lhs: EnumerationWithRawValueNode, rhs: EnumerationWithRawValueNode) -> Bool {
-        return lhs.cases == rhs.cases
+        lhs.cases == rhs.cases
     }
 
     func typeCheck(withArgument argument: String) -> String {
 
-        return "case .string(let string) = \(argument), \(cases).contains(string)"
+        "case .string(let string) = \(argument), \(cases).contains(string)"
     }
 }

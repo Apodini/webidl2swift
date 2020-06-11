@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -14,7 +17,7 @@ class ReadonlyPropertyNode: PropertyNode, Equatable {
     }
 
     func initializationStatement(forContext context: MemberNodeContext) -> String? {
-        guard case .classContext = context, !dataType.node!.isProtocol, !isStatic else {
+        guard case .classContext = context, !unwrapNode(dataType).isProtocol, !isStatic else {
             return nil
         }
 
@@ -24,9 +27,9 @@ class ReadonlyPropertyNode: PropertyNode, Equatable {
     }
 
     private func _swiftDeclarations(inContext: MemberNodeContext) -> String {
-                let declaration: String
 
-        let dataTypeNode = dataType.node!
+        let declaration: String
+        let dataTypeNode = unwrapNode(dataType)
 
         switch (inContext, isStatic) {
         case (.classContext, false) where dataTypeNode.isProtocol:
@@ -63,11 +66,12 @@ class ReadonlyPropertyNode: PropertyNode, Equatable {
 
     func swiftDeclarations(inContext: MemberNodeContext) -> [String] {
 
-        return [_swiftDeclarations(inContext: inContext)]
+        [_swiftDeclarations(inContext: inContext)]
     }
 
     func swiftImplementations(inContext: MemberNodeContext) -> [String] {
-               let dataTypeNode = dataType.node!
+
+        let dataTypeNode = unwrapNode(dataType)
         switch inContext {
         case .classContext where dataTypeNode.isProtocol,
              .protocolContext where dataTypeNode.isProtocol,
@@ -75,18 +79,16 @@ class ReadonlyPropertyNode: PropertyNode, Equatable {
              .structContext where dataTypeNode.isProtocol:
             return [
                 _swiftDeclarations(inContext: inContext) + """
-                 {
+                {
                     get {
                         return objectRef.\(name).fromJSValue() as \(dataTypeNode.typeErasedSwiftType)
                     }
                 }
                 """
-        ]
+            ]
 
         case .classContext:
             return [_swiftDeclarations(inContext: inContext)]
-
-
 
         case .protocolContext, .extensionContext, .structContext, .namespaceContext:
             return [
@@ -102,6 +104,6 @@ class ReadonlyPropertyNode: PropertyNode, Equatable {
     }
 
     static func == (lhs: ReadonlyPropertyNode, rhs: ReadonlyPropertyNode) -> Bool {
-        return lhs.name == rhs.name && lhs.dataType == rhs.dataType
+        lhs.name == rhs.name && lhs.dataType == rhs.dataType
     }
 }

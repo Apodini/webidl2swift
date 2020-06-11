@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -10,22 +13,22 @@ class ArrayNode: TypeNode, Equatable {
     }
 
     var isArray: Bool {
-        return true
+        true
     }
 
     var swiftTypeName: String {
-        return "[\(element.node!.swiftTypeName)]"
+        "[\(unwrapNode(element).swiftTypeName)]"
     }
 
     var swiftDeclaration: String {
-        return ""
+        ""
     }
 
     var arrayElementSwiftTypeName: String? {
-        return element.node!.swiftTypeName
+        unwrapNode(element).swiftTypeName
     }
 
     static func == (lhs: ArrayNode, rhs: ArrayNode) -> Bool {
-        return lhs.element == rhs.element
+        lhs.element == rhs.element
     }
 }

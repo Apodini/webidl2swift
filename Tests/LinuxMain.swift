@@ -1,3 +1,7 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
+
 import XCTest
 
 import webidl2swiftTests

@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -10,8 +13,10 @@ public enum ExtendedAttribute: Equatable {
     case identifierList(String, [String])
 }
 
+///
 public typealias ExtendedAttributeList = [ExtendedAttribute]
 
+///
 public protocol Definition {}
 
 public struct Callback: Definition, Equatable {
@@ -331,6 +336,7 @@ public struct Promise: Equatable {
     public let returnType: ReturnType
 }
 
+// swiftlint:disable identifier_name
 public enum BufferRelatedType: String, Equatable, Hashable {
     case ArrayBuffer
     case DataView
@@ -352,12 +358,6 @@ public enum StringType: String, Equatable, Hashable {
     case USVString
 }
 
-public struct RecordType: Equatable{
-
-    public let stringType: StringType
-    public let typeWithExtendedAttributes: TypeWithExtendedAttributes
-}
-
 public enum PrimitiveType: Equatable {
     case UnsignedIntegerType(UnsignedIntegerType)
     case UnrestrictedFloatType(UnrestrictedFloatType)
@@ -365,6 +365,14 @@ public enum PrimitiveType: Equatable {
     case byte
     case octet
 }
+// swiftlint:enable identifier_name
+
+public struct RecordType: Equatable {
+
+    public let stringType: StringType
+    public let typeWithExtendedAttributes: TypeWithExtendedAttributes
+}
+
 
 public enum UnrestrictedFloatType: Equatable {
     case unrestricted(FloatType)

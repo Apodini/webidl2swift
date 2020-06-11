@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -11,20 +14,21 @@ class TypeErasedWrapperStructNode: TypeNode, Equatable {
 
     var swiftTypeName: String {
 
-        return "Any\(wrapped.identifier)"
+        "Any\(wrapped.identifier)"
     }
 
     var swiftDeclaration: String {
 
         let context = MemberNodeContext.classContext(swiftTypeName)
-
-        let protocolNode = wrapped.node as! ProtocolNode
+        // swiftlint:disable force_cast
+        let protocolNode = unwrapNode(wrapped) as! ProtocolNode
         let members = protocolNode.requiredMembers
 
-        let (namedSubscript, indexedSubscript) = SubscriptNode.mergedSubscriptNodes(members.filter({ $0.isSubscript }) as! [SubscriptNode])
+        let (namedSubscript, indexedSubscript) = SubscriptNode.mergedSubscriptNodes(members.filter { $0.isSubscript } as! [SubscriptNode])
+        // swiftlint:enable force_cast
 
         var declaration = """
-        class \(swiftTypeName): JSBridgedType, \(wrapped.node!.swiftTypeName) {
+        class \(swiftTypeName): JSBridgedType, \(unwrapNode(wrapped).swiftTypeName) {
 
             let objectRef: JSObjectRef
 
@@ -35,16 +39,14 @@ class TypeErasedWrapperStructNode: TypeNode, Equatable {
         """
 
         declaration += "\n"
-        namedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n")}
+        namedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n") }
         declaration += "\n"
-        indexedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n")}
+        indexedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n") }
         declaration += "\n"
 
         declaration += members
-            .filter({ !$0.isSubscript })
-            .flatMap({
-                return $0.swiftImplementations(inContext: context)
-            })
+            .filter { !$0.isSubscript }
+            .flatMap { $0.swiftImplementations(inContext: context) }
             .joined(separator: "\n\n")
 
         declaration += "\n}"
@@ -53,6 +55,6 @@ class TypeErasedWrapperStructNode: TypeNode, Equatable {
     }
     
     static func == (lhs: TypeErasedWrapperStructNode, rhs: TypeErasedWrapperStructNode) -> Bool {
-        return lhs.wrapped == rhs.wrapped
+        lhs.wrapped == rhs.wrapped
     }
 }

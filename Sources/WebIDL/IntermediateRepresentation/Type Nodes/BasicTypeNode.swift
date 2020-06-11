@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -10,19 +13,19 @@ class BasicTypeNode: TypeNode, Equatable {
     }
 
     var swiftTypeName: String {
-        return typeName
+        typeName
     }
 
     var swiftDeclaration: String {
-        return ""
+        ""
     }
 
     func typeCheck(withArgument argument: String) -> String {
-        return "false"
+        "false"
     }
 
     static func == (lhs: BasicTypeNode, rhs: BasicTypeNode) -> Bool {
-        return lhs.typeName == rhs.typeName
+        lhs.typeName == rhs.typeName
     }
 }
 
@@ -37,27 +40,26 @@ class BasicArrayTypeNode: TypeNode, Equatable {
     }
 
     var isArray: Bool {
-        return true
+        true
     }
 
     var swiftTypeName: String {
-        return typeName
+        typeName
     }
 
     var arrayElementSwiftTypeName: String? {
-        return scalarType
+        scalarType
     }
 
     var swiftDeclaration: String {
-        return ""
+        ""
     }
 
     static func == (lhs: BasicArrayTypeNode, rhs: BasicArrayTypeNode) -> Bool {
-        return lhs.typeName == rhs.typeName &&
-            lhs.scalarType == rhs.scalarType
+        lhs.typeName == rhs.typeName && lhs.scalarType == rhs.scalarType
     }
 
     func typeCheck(withArgument argument: String) -> String {
-        return "\(argument).instanceOf(\"\(typeName)\")"
+        "\(argument).instanceOf(\"\(typeName)\")"
     }
 }

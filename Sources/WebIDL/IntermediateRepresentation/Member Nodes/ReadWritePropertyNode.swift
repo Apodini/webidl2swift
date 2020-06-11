@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -16,16 +19,16 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
     }
 
     var isProperty: Bool {
-        return true
+        true
     }
 
     func initializationStatement(forContext context: MemberNodeContext) -> String? {
 
-        guard case .classContext = context, !dataType.node!.isProtocol, !isStatic else {
+        guard case .classContext = context, !unwrapNode(dataType).isProtocol, !isStatic else {
             return nil
         }
 
-        let dataTypeNode = dataType.node!
+        let dataTypeNode = unwrapNode(dataType)
 
         if dataTypeNode.isClosure && dataTypeNode.numberOfClosureArguments == 1 {
             return """
@@ -40,11 +43,12 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
         }
     }
 
+    // swiftlint:disable function_body_length cyclomatic_complexity
     private func _swiftDeclarations(inContext: MemberNodeContext) -> String {
 
         let declaration: String
 
-        let dataTypeNode = dataType.node!
+        let dataTypeNode = unwrapNode(dataType)
 
         switch (inContext, isStatic) {
         case (.classContext, false) where dataTypeNode.isProtocol:
@@ -122,15 +126,17 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
 
         return declaration
     }
+    // swiftlint:enable function_body_length cyclomatic_complexity
 
     func swiftDeclarations(inContext: MemberNodeContext) -> [String] {
 
-        return [_swiftDeclarations(inContext: inContext)]
+        [_swiftDeclarations(inContext: inContext)]
     }
 
+    // swiftlint:disable function_body_length
     func swiftImplementations(inContext: MemberNodeContext) -> [String] {
 
-        let dataTypeNode = dataType.node!
+        let dataTypeNode = unwrapNode(dataType)
         switch inContext {
         case .classContext where dataTypeNode.isProtocol,
              .protocolContext where dataTypeNode.isProtocol,
@@ -138,7 +144,7 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
              .structContext where dataTypeNode.isProtocol:
             return [
                 _swiftDeclarations(inContext: inContext) + """
-                 {
+                {
                     get {
                         return objectRef.\(name).fromJSValue() as \(dataTypeNode.typeErasedSwiftType)
                     }
@@ -147,7 +153,7 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
                     }
                 }
                 """
-        ]
+            ]
 
         case .classContext where dataTypeNode.numberOfClosureArguments <= 1:
             return [_swiftDeclarations(inContext: inContext)]
@@ -187,20 +193,20 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
             let getterArguments = (0 ..< dataTypeNode.numberOfClosureArguments).map({ "arg\($0)" }).joined(separator: ", ")
             let setterArguments = (0 ..< dataTypeNode.numberOfClosureArguments).map({ "arguments[\($0)].fromJSValue()" }).joined(separator: ", ")
             return [
-                 _swiftDeclarations(inContext: inContext) + """
-                  {
+                _swiftDeclarations(inContext: inContext) + """
+                {
                     get {
-                         let function = objectRef[dynamicMember: "\(name)"] as JSFunctionRef
-                         return { (\(getterArguments)) in function.dynamicallyCall(withArguments: [\(getterArguments)]).fromJSValue() }
-                     }
-                     set {
-                         objectRef[dynamicMember: "\(name)"] = JSFunctionRef.from({ arguments in
-                             return newValue(\(setterArguments)).jsValue()
-                         }).jsValue()
-                     }
-                 }
-                 """
-             ]
+                        let function = objectRef[dynamicMember: "\(name)"] as JSFunctionRef
+                        return { (\(getterArguments)) in function.dynamicallyCall(withArguments: [\(getterArguments)]).fromJSValue() }
+                    }
+                    set {
+                        objectRef[dynamicMember: "\(name)"] = JSFunctionRef.from({ arguments in
+                            return newValue(\(setterArguments)).jsValue()
+                        }).jsValue()
+                    }
+                }
+                """
+            ]
 
         case .protocolContext,
              .extensionContext,
@@ -221,8 +227,9 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
             fatalError("Not supported by Web IDL standard!")
         }
     }
+    // swiftlint:enable function_body_length
 
     static func == (lhs: ReadWritePropertyNode, rhs: ReadWritePropertyNode) -> Bool {
-        return lhs.name == rhs.name && lhs.dataType == rhs.dataType
+        lhs.name == rhs.name && lhs.dataType == rhs.dataType
     }
 }

@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -14,17 +17,17 @@ class ConstantPropertyNode: PropertyNode, Equatable {
     }
 
     func initializationStatement(forContext context: MemberNodeContext) -> String? {
-        return nil
+        nil
     }
 
     private func _swiftDeclarations(inContext: MemberNodeContext) -> String {
 
         switch inContext {
         case .classContext:
-            return "public let \(escapedName(name)): \(dataType.node!.swiftTypeName)"
+            return "public let \(escapedName(name)): \(unwrapNode(dataType).swiftTypeName)"
 
         case .protocolContext, .extensionContext, .structContext:
-            return "var \(escapedName(name)): \(dataType.node!.swiftTypeName)"
+            return "var \(escapedName(name)): \(unwrapNode(dataType).swiftTypeName)"
 
         case .namespaceContext:
             fatalError("Not supported by Web IDL standard!")
@@ -33,7 +36,7 @@ class ConstantPropertyNode: PropertyNode, Equatable {
 
     func swiftDeclarations(inContext: MemberNodeContext) -> [String] {
 
-        return [_swiftDeclarations(inContext: inContext)]
+        [_swiftDeclarations(inContext: inContext)]
     }
 
     func swiftImplementations(inContext: MemberNodeContext) -> [String] {
@@ -51,6 +54,6 @@ class ConstantPropertyNode: PropertyNode, Equatable {
     }
 
     static func == (lhs: ConstantPropertyNode, rhs: ConstantPropertyNode) -> Bool {
-        return lhs.name == rhs.name && lhs.value == rhs.value && lhs.dataType == rhs.dataType
+        lhs.name == rhs.name && lhs.value == rhs.value && lhs.dataType == rhs.dataType
     }
 }

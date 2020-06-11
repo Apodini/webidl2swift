@@ -1,6 +1,11 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
+// swiftlint:disable type_body_length file_length
+/// `Parser` converts a token stream into a list of `Definion`.
 public class Parser {
 
     public enum Error: Swift.Error {
@@ -30,8 +35,10 @@ public class Parser {
     var strings: [String]
     var others: [String]
 
+    /// Initialize a `Parser` instance
+    /// - Parameter input: The token stream produced by `Tokenizer`.
     public init(input: TokenisationResult) {
-        self.tokens = input.tokens.filter({
+        self.tokens = input.tokens.filter {
 
             switch $0 {
             case .comment, .multilineComment:
@@ -39,7 +46,7 @@ public class Parser {
             default:
                 return true
             }
-        })
+        }
         self.identifiers = input.identifiers
         self.integers = input.integers
         self.decimals = input.decimals
@@ -91,9 +98,12 @@ public class Parser {
         throw Error.unexpectedToken(input)
     }
 
+    /// Parse the provided `TokenisationResult`
+    /// - Throws: Any error related to parsing the token stream. See `Parser.Error`
+    /// - Returns: A list of parsed definitions
     public func parse() throws -> [Definition] {
 
-        return try parseDefinitions()
+        try parseDefinitions()
     }
 
     // MARK: - Rules
@@ -130,32 +140,33 @@ public class Parser {
          */
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .CallbackOrInterfaceOrMixin).contains(t):
+        case let token where firstSet(for: .CallbackOrInterfaceOrMixin).contains(token):
             return try parseCallbackOrInterfaceOrMixin(extendedAttributeList: extendedAttributeList)
 
-        case let t where firstSet(for: .Namespace).contains(t):
+        case let token where firstSet(for: .Namespace).contains(token):
             return try parseNamespace(extendedAttributeList: extendedAttributeList)
 
-        case let t where firstSet(for: .Partial).contains(t):
+        case let token where firstSet(for: .Partial).contains(token):
             return try parsePartial(extendedAttributeList: extendedAttributeList)
 
-        case let t where firstSet(for: .Dictionary).contains(t):
+        case let token where firstSet(for: .Dictionary).contains(token):
             return try parseDictionary(extendedAttributeList: extendedAttributeList)
 
-        case let t where firstSet(for: .Enum).contains(t):
+        case let token where firstSet(for: .Enum).contains(token):
             return try parseEnum(extendedAttributeList: extendedAttributeList)
 
-        case let t where firstSet(for: .Typedef).contains(t):
+        case let token where firstSet(for: .Typedef).contains(token):
             return try parseTypedef(extendedAttributeList: extendedAttributeList)
 
-        case let t where firstSet(for: .IncludesStatement).contains(t):
+        case let token where firstSet(for: .IncludesStatement).contains(token):
             return try parseIncludesStatement(extendedAttributeList: extendedAttributeList)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
+    // swiftlint:disable cyclomatic_complexity
     func parseArgumentNameKeyword() throws -> ArgumentNameKeyword {
 
         /*
@@ -213,10 +224,11 @@ public class Parser {
         case .terminal(.stringifier): return .stringifier
         case .terminal(.typedef): return .typedef
         case .terminal(.unrestricted): return .unrestricted
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
+    // swiftlint:enable cyclomatic_complexity
 
     func parseCallbackOrInterfaceOrMixin(extendedAttributeList: ExtendedAttributeList) throws -> Definition {
 
@@ -232,8 +244,8 @@ public class Parser {
         case .terminal(.interface):
             return try parseInterfaceOrMixin(extendedAttributeList: extendedAttributeList)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -245,14 +257,14 @@ public class Parser {
          MixinRest
          */
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .InterfaceRest).contains(t):
+        case let token where firstSet(for: .InterfaceRest).contains(token):
             return try parseInterfaceRest(extendedAttributeList: extendedAttributeList)
 
-        case let t where firstSet(for: .MixinRest).contains(t):
+        case let token where firstSet(for: .MixinRest).contains(token):
             return try parseMixinRest(extendedAttributeList: extendedAttributeList)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -290,42 +302,6 @@ public class Parser {
 
     func parseExtendedAttribute() throws -> ExtendedAttribute {
 
-        //        /*
-        //         ExtendedAttribute ::
-        //            ( ExtendedAttributeInner ) ExtendedAttributeRest
-        //            [ ExtendedAttributeInner ] ExtendedAttributeRest
-        //            { ExtendedAttributeInner } ExtendedAttributeRest
-        //            Other ExtendedAttributeRest
-        //         */
-        //
-        //        switch try unwrap(tokens.first) {
-        //        case .terminal(.openingParenthesis):
-        //            try expect(next: .terminal(.openingParenthesis))
-        //            try parseExtendedAttributeInner()
-        //            try expect(next: .terminal(.closingParenthesis))
-        //            try parseExtendedAttributeRest()
-        //
-        //        case .terminal(.openingSquareBracket):
-        //            try expect(next: .terminal(.openingSquareBracket))
-        //            try parseExtendedAttributeInner()
-        //            try expect(next: .terminal(.closingSquareBracket))
-        //            try parseExtendedAttributeRest()
-        //
-        //        case .terminal(.openingCurlyBraces):
-        //            try expect(next: .terminal(.openingCurlyBraces))
-        //            try parseExtendedAttributeInner()
-        //            try expect(next: .terminal(.closingCurlyBraces))
-        //            try parseExtendedAttributeRest()
-        //
-        //        case let t where firstSet(for: .Other).contains(t):
-        //            try parseOther()
-        //            try parseExtendedAttributeRest()
-        //
-        //        case let t:
-        //            try unexpected(t)
-        //        }
-        //
-
         // Workaround for [Default] being tokenized to .nonTerminal(.Default) instead of .identifier
         let identifier: String
         switch try unwrap(tokens.first) {
@@ -333,12 +309,8 @@ public class Parser {
             tokens.removeFirst()
             identifier = identifiers.removeFirst()
 
-//        case .nonTerminal(.Default):
-//            tokens.removeFirst()
-//            identifier = "Default"
-
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
 
         switch try unwrap(tokens.first) {
@@ -351,8 +323,8 @@ public class Parser {
         case .terminal(.comma), .terminal(.closingSquareBracket):
             return try parseExtendedAttributeNoArgs(withIdentifier: identifier)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -387,8 +359,8 @@ public class Parser {
         case .identifier:
             return try parseExtendedAttributeIntermediateWithIdentifierPrefix(withIdentifier: identifier)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -404,6 +376,7 @@ public class Parser {
     }
 
     func parseExtendedAttributeIdent(withIdentifier identifier: String, otherIdentifier: String) throws -> ExtendedAttribute {
+
         /*
          ExtendedAttributeIdent ::
          identifier = identifier
@@ -413,6 +386,7 @@ public class Parser {
     }
 
     func parseExtendedAttributeIdentList(withIdentifier identifier: String) throws -> ExtendedAttribute {
+
         /*
          ExtendedAttributeIdentList ::
          identifier = ( IdentifierList )
@@ -425,6 +399,7 @@ public class Parser {
     }
 
     func parseExtendedAttributeNamedArgList(withIdentifier identifier: String, otherIdentifier: String) throws -> ExtendedAttribute {
+
         /*
          ExtendedAttributeNamedArgList ::
          identifier = identifier ( ArgumentList )
@@ -451,67 +426,6 @@ public class Parser {
         let extendedAttribute = try parseExtendedAttribute()
         return try [extendedAttribute] + parseExtendedAttributes()
     }
-
-//    func parseExtendedAttributeRest() throws -> ExtendedAttribute? {
-//        /*
-//         ExtendedAttributeRest ::
-//         ExtendedAttribute
-//         ε
-//         */
-//
-//        if let nextCharacter = tokens.first,
-//            firstSet(for: .ExtendedAttribute).contains(nextCharacter) {
-//            return try parseExtendedAttribute()
-//        }
-//
-//        return nil
-//    }
-
-//    func parseExtendedAttributeInner() throws -> ExtendedAttribute? {
-//        /*
-//         ExtendedAttributeInner ::
-//         ( ExtendedAttributeInner ) ExtendedAttributeInner
-//         [ ExtendedAttributeInner ] ExtendedAttributeInner
-//         { ExtendedAttributeInner } ExtendedAttributeInner
-//         OtherOrComma ExtendedAttributeInner
-//         ε
-//         */
-//
-//        switch try unwrap(tokens.first) {
-//        case .terminal(.openingParenthesis):
-//            try expect(next: .terminal(.openingParenthesis))
-//            let inner0 = try parseExtendedAttributeInner()
-//            try expect(next: .terminal(.closingParenthesis))
-//            let inner1 = try parseExtendedAttributeInner()
-//            // TODO:
-//            return nil
-//
-//        case .terminal(.openingSquareBracket):
-//            try expect(next: .terminal(.openingSquareBracket))
-//            let inner0 = try parseExtendedAttributeInner()
-//            try expect(next: .terminal(.closingSquareBracket))
-//            let inner1 = try parseExtendedAttributeInner()
-//            // TODO:
-//            return nil
-//
-//        case .terminal(.openingCurlyBraces):
-//            try expect(next: .terminal(.openingCurlyBraces))
-//            let inner0 = try parseExtendedAttributeInner()
-//            try expect(next: .terminal(.closingCurlyBraces))
-//            let inner1 = try parseExtendedAttributeInner()
-//            // TODO:
-//            return nil
-//
-//        case let t where firstSet(for: .OtherOrComma).contains(t):
-//            try parseOtherOrComma()
-//            try parseExtendedAttributeInner()
-//
-//        default:
-//            return nil
-//        }
-//
-//        return nil
-//    }
 
     func parseIdentifierList() throws -> [String] {
 
@@ -540,40 +454,6 @@ public class Parser {
         return try [identifier] + parseIdentifiers()
     }
 
-//    func parseOther() throws -> Void {
-//
-//        // TODO;
-//
-//
-//        switch try unwrap(tokens.first) {
-//        case .identifier:
-//            identifiers.removeFirst()
-//
-//        case .integer:
-//            integers.removeFirst()
-//
-//        case .decimal:
-//            decimals.removeFirst()
-//
-//        case .string:
-//            strings.removeFirst()
-//
-//        case .other:
-//            others.removeFirst()
-//
-//        default:
-//            break
-//        }
-//
-//        tokens.removeFirst()
-//    }
-//
-//    func parseOtherOrComma() throws -> Void {
-//        guard check(forNext: .terminal(.comma)) else {
-//            return try parseOther()
-//        }
-//    }
-
     func parseCallbackRestOrInterface(extendedAttributeList: ExtendedAttributeList) throws -> Definition {
 
         /*
@@ -583,7 +463,7 @@ public class Parser {
          */
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .CallbackRest).contains(t):
+        case let token where firstSet(for: .CallbackRest).contains(token):
             return try parseCallbackRest(extendedAttributeList: extendedAttributeList)
 
         case .terminal(.interface):
@@ -595,8 +475,8 @@ public class Parser {
             try expect(next: .terminal(.semicolon))
             return CallbackInterface(identifer: identifer, extendedAttributeList: extendedAttributeList, callbackInterfaceMembers: callbackInterfaceMembers)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -637,16 +517,16 @@ public class Parser {
          */
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .Const).contains(t):
+        case let token where firstSet(for: .Const).contains(token):
             let const = try parseConst()
             return .const(const, extendedAttributeList)
 
-        case let t where firstSet(for: .RegularOperation).contains(t):
+        case let token where firstSet(for: .RegularOperation).contains(token):
             let regularOperation = try parseRegularOperation()
             return .regularOperation(regularOperation, extendedAttributeList)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -668,9 +548,9 @@ public class Parser {
     func parseMixinMembers() throws -> [MixinMember] {
 
         /*
-        MixinMembers ::
-            ExtendedAttributeList MixinMember MixinMembers
-            ε
+         MixinMembers ::
+         ExtendedAttributeList MixinMember MixinMembers
+         ε
          */
         guard union(firstSet(for: .ExtendedAttributeList), firstSet(for: .MixinMember)).contains(try unwrap(tokens.first)) else {
             return []
@@ -684,27 +564,27 @@ public class Parser {
 
         /*
          MixinMember ::
-             Const
-             RegularOperation
-             Stringifier
-             ReadOnly AttributeRest
+         Const
+         RegularOperation
+         Stringifier
+         ReadOnly AttributeRest
          */
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .Const).contains(t):
+        case let token where firstSet(for: .Const).contains(token):
             return .const(try parseConst(), extendedAttributeList)
 
-        case let t where firstSet(for: .RegularOperation).contains(t):
+        case let token where firstSet(for: .RegularOperation).contains(token):
             return .regularOperation(try parseRegularOperation(), extendedAttributeList)
 
-        case let t where firstSet(for: .Stringifier).contains(t):
+        case let token where firstSet(for: .Stringifier).contains(token):
             return .stringifier(try parseStringifier(), extendedAttributeList)
 
-        case let t where union(firstSet(for: .ReadOnly), firstSet(for: .AttributeRest)).contains(t):
+        case let token where union(firstSet(for: .ReadOnly), firstSet(for: .AttributeRest)).contains(token):
             return .readOnlyAttributeRest(try parseReadOnly(), try parseAttributeRest(), extendedAttributeList)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -731,22 +611,22 @@ public class Parser {
     func parseInterfaceMember(extendedAttributeList: ExtendedAttributeList) throws -> InterfaceMember {
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .PartialInterfaceMember).contains(t):
+        case let token where firstSet(for: .PartialInterfaceMember).contains(token):
             return try parsePartialInterfaceMember(extendedAttributeList: extendedAttributeList)
 
-        case let t where firstSet(for: .Constructor).contains(t):
+        case let token where firstSet(for: .Constructor).contains(token):
             return try parseConstructor(extendedAttributeList: extendedAttributeList)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
     func parsePartialInterfaceMembers() throws -> [InterfaceMember] {
         /*
-        PartialInterfaceMembers ::
-            ExtendedAttributeList PartialInterfaceMember PartialInterfaceMembers
-            ε
+         PartialInterfaceMembers ::
+         ExtendedAttributeList PartialInterfaceMember PartialInterfaceMembers
+         ε
          */
 
         guard union(firstSet(for: .ExtendedAttributeList), firstSet(for: .PartialInterfaceMember)).contains(try unwrap(tokens.first)) else {
@@ -757,56 +637,58 @@ public class Parser {
         return try [partialInterfaceMember] + parsePartialInterfaceMembers()
     }
 
+    // swiftlint:disable cyclomatic_complexity
     func parsePartialInterfaceMember(extendedAttributeList: ExtendedAttributeList) throws -> InterfaceMember {
         /*
-        PartialInterfaceMember ::
-            Const
-            Operation
-            Stringifier
-            StaticMember
-            Iterable
-            AsyncIterable
-            ReadOnlyMember
-            ReadWriteAttribute
-            ReadWriteMaplike
-            ReadWriteSetlike
+         PartialInterfaceMember ::
+         Const
+         Operation
+         Stringifier
+         StaticMember
+         Iterable
+         AsyncIterable
+         ReadOnlyMember
+         ReadWriteAttribute
+         ReadWriteMaplike
+         ReadWriteSetlike
          */
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .Const).contains(t):
+        case let token where firstSet(for: .Const).contains(token):
             return .const(try parseConst(), extendedAttributeList)
 
-        case let t where firstSet(for: .Operation).contains(t):
+        case let token where firstSet(for: .Operation).contains(token):
             return try parseOperation(extendedAttributeList: extendedAttributeList)
 
-        case let t where firstSet(for: .Stringifier).contains(t):
+        case let token where firstSet(for: .Stringifier).contains(token):
             return .stringifier(try parseStringifier(), extendedAttributeList)
 
-        case let t where firstSet(for: .StaticMember).contains(t):
+        case let token where firstSet(for: .StaticMember).contains(token):
             return .staticMember(try parseStaticMember(), extendedAttributeList)
 
-        case let t where firstSet(for: .Iterable).contains(t):
+        case let token where firstSet(for: .Iterable).contains(token):
             return .iterable(try parseIterable(), extendedAttributeList)
 
-        case let t where firstSet(for: .AsyncIterable).contains(t):
+        case let token where firstSet(for: .AsyncIterable).contains(token):
             return .asyncIterable(try parseAsyncIterable(), extendedAttributeList)
 
-        case let t where firstSet(for: .ReadOnlyMember).contains(t):
+        case let token where firstSet(for: .ReadOnlyMember).contains(token):
             return try parseReadOnlyMember(extendedAttributeList: extendedAttributeList)
 
-        case let t where firstSet(for: .ReadWriteAttribute).contains(t):
+        case let token where firstSet(for: .ReadWriteAttribute).contains(token):
             return try parseReadWriteAttribute(extendedAttributeList: extendedAttributeList)
 
-        case let t where firstSet(for: .ReadWriteMaplike).contains(t):
+        case let token where firstSet(for: .ReadWriteMaplike).contains(token):
             return .readWriteMaplike(try parseReadWriteMaplike(), extendedAttributeList)
 
-        case let t where firstSet(for: .ReadWriteSetlike).contains(t):
+        case let token where firstSet(for: .ReadWriteSetlike).contains(token):
             return .readWriteSetlike(try parseReadWriteSetlike(), extendedAttributeList)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
+    // swiftlint:enable cyclomatic_complexity
 
     func parseOperation(extendedAttributeList: ExtendedAttributeList) throws -> InterfaceMember {
 
@@ -817,16 +699,16 @@ public class Parser {
          */
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .RegularOperation).contains(t):
+        case let token where firstSet(for: .RegularOperation).contains(token):
             let regularOperation = try parseRegularOperation()
             return .operation(.regular(regularOperation), extendedAttributeList)
 
-        case let t where firstSet(for: .SpecialOperation).contains(t):
+        case let token where firstSet(for: .SpecialOperation).contains(token):
             let specialOperation = try parseSpecialOperation()
             return .operation(specialOperation, extendedAttributeList)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -878,14 +760,14 @@ public class Parser {
          */
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .OperationNameKeyword).contains(t):
+        case let token where firstSet(for: .OperationNameKeyword).contains(token):
             return try parseOperationNameKeyword()
 
         case .identifier:
             return .identifier(try parseIdentifier())
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -929,8 +811,8 @@ public class Parser {
             tokens.removeFirst()
             return .deleter
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -938,7 +820,7 @@ public class Parser {
 
         /*
          Stringifier ::
-             stringifier StringifierRest
+         stringifier StringifierRest
          */
 
         try expect(next: .terminal(.stringifier))
@@ -954,12 +836,12 @@ public class Parser {
          */
 
         switch try unwrap(tokens.first) {
-        case let t where union(firstSet(for: .ReadOnly), firstSet(for: .AttributeRest)).contains(t):
+        case let token where union(firstSet(for: .ReadOnly), firstSet(for: .AttributeRest)).contains(token):
             let readOnly = try parseReadOnly()
             let attributeRest = try parseAttributeRest()
             return .readOnlyAttributeRest(readOnly, attributeRest.typeWithExtendedAttributes, attributeRest.attributeName)
 
-        case let t where firstSet(for: .RegularOperation).contains(t):
+        case let token where firstSet(for: .RegularOperation).contains(token):
             let regularOperation = try parseRegularOperation()
             return .regular(regularOperation)
 
@@ -967,8 +849,8 @@ public class Parser {
             tokens.removeFirst()
             return .empty
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1005,14 +887,14 @@ public class Parser {
          */
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .AttributeNameKeyword).contains(t):
+        case let token where firstSet(for: .AttributeNameKeyword).contains(token):
             return .attributeNameKeyword(try parseAttributeNameKeyword())
 
         case .identifier:
             return .identifier(try parseIdentifier())
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1033,8 +915,8 @@ public class Parser {
             tokens.removeFirst()
             return .required
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1056,14 +938,14 @@ public class Parser {
          */
 
         switch try unwrap(tokens.first) {
-        case let t where union(firstSet(for: .ReadOnly), firstSet(for: .AttributeRest)).contains(t):
+        case let token where union(firstSet(for: .ReadOnly), firstSet(for: .AttributeRest)).contains(token):
             return .readOnlyAttributeRest(try parseReadOnly(), try parseAttributeRest())
 
-        case let t where firstSet(for: .RegularOperation).contains(t):
+        case let token where firstSet(for: .RegularOperation).contains(token):
             return .regularOperation(try parseRegularOperation())
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1131,17 +1013,17 @@ public class Parser {
          */
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .AttributeRest).contains(t):
+        case let token where firstSet(for: .AttributeRest).contains(token):
             return .attribute(try parseAttributeRest())
 
-        case let t where firstSet(for: .MaplikeRest).contains(t):
+        case let token where firstSet(for: .MaplikeRest).contains(token):
             return .maplike(try parseMaplikeRest())
 
-        case let t where firstSet(for: .SetlikeRest).contains(t):
+        case let token where firstSet(for: .SetlikeRest).contains(token):
             return .setlike(try parseSetlikeRest())
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1189,12 +1071,12 @@ public class Parser {
 
     func parseReadWriteMaplike() throws -> ReadWriteMaplike {
 
-        return ReadWriteMaplike(maplike: try parseMaplikeRest())
+        ReadWriteMaplike(maplike: try parseMaplikeRest())
     }
 
     func parseReadWriteSetlike() throws -> ReadWriteSetlike {
 
-        return ReadWriteSetlike(setlike: try parseSetlikeRest())
+        ReadWriteSetlike(setlike: try parseSetlikeRest())
     }
 
     func parseIdentifier() throws -> String {
@@ -1217,15 +1099,15 @@ public class Parser {
     func parseConstType() throws -> ConstType {
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .PrimitiveType).contains(t):
+        case let token where firstSet(for: .PrimitiveType).contains(token):
             return .primitiveType(try parsePrimitiveType())
 
         case .identifier:
             try expect(next: .identifier)
             return .identifier(identifiers.removeFirst())
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1282,15 +1164,14 @@ public class Parser {
             let defaultValue = try parseDefault()
             return .optional(typeWithExtendedAttributes, argumentName, defaultValue)
 
-        case let t where firstSet(for: .Type).contains(t):
+        case let token where firstSet(for: .Type).contains(token):
             let dataType = try parseType()
             let ellipsis = try parseEllipsis()
             let argumentName = try parseArgumentName()
             return .nonOptional(dataType, ellipsis, argumentName)
 
-        case let t:
-            try unexpected(t)
-
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1302,15 +1183,14 @@ public class Parser {
          identifier
          */
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .ArgumentNameKeyword).contains(t):
+        case let token where firstSet(for: .ArgumentNameKeyword).contains(token):
             return .argumentNameKeyword(try parseArgumentNameKeyword())
 
         case .identifier:
             return .identifier(try parseIdentifier())
 
-        case let t:
-            try unexpected(t)
-
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1337,11 +1217,11 @@ public class Parser {
     func parseDefaultValue() throws -> DefaultValue {
         /*
          DefaultValue ::
-             ConstValue
-             string
-             [ ]
-             { }
-             null
+         ConstValue
+         string
+         [ ]
+         { }
+         null
          */
 
         switch try unwrap(tokens.first) {
@@ -1363,29 +1243,29 @@ public class Parser {
             try expect(next: .terminal(.closingCurlyBraces))
             return .emptyDictionary
 
-        case let t where firstSet(for: .ConstValue).contains(t):
+        case let token where firstSet(for: .ConstValue).contains(token):
             return .constValue(try parseConstValue())
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
     func parseConstValue() throws -> ConstValue {
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .BooleanLiteral).contains(t):
+        case let token where firstSet(for: .BooleanLiteral).contains(token):
             return .booleanLiteral(try parseBooleanLiteral())
 
-        case let t where firstSet(for: .FloatLiteral).contains(t):
+        case let token where firstSet(for: .FloatLiteral).contains(token):
             return .floatLiteral(try parseFloatLiteral())
 
         case .integer:
             try expect(next: .integer)
             return .integer(integers.removeFirst())
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1400,8 +1280,8 @@ public class Parser {
             try expect(next: .terminal(.false))
             return false
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1422,11 +1302,11 @@ public class Parser {
             return .infinity
 
         case .terminal(.nan):
-        try expect(next: .terminal(.nan))
-        return .notANumber
+            try expect(next: .terminal(.nan))
+            return .notANumber
             
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1434,7 +1314,7 @@ public class Parser {
 
         /*
          Namespace ::
-             namespace identifier { NamespaceMembers } ;
+         namespace identifier { NamespaceMembers } ;
          */
 
         try expect(next: .terminal(.namespace))
@@ -1451,8 +1331,8 @@ public class Parser {
 
         /*
          NamespaceMembers ::
-             ExtendedAttributeList NamespaceMember NamespaceMembers
-             ε
+         ExtendedAttributeList NamespaceMember NamespaceMembers
+         ε
          */
 
         guard union(firstSet(for: .ExtendedAttributeList), firstSet(for: .NamespaceMember)).contains(try unwrap(tokens.first)) else {
@@ -1467,19 +1347,19 @@ public class Parser {
 
         /*
          NamespaceMember ::
-             RegularOperation
-             readonly AttributeRest
+         RegularOperation
+         readonly AttributeRest
          */
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .RegularOperation).contains(t):
+        case let token where firstSet(for: .RegularOperation).contains(token):
             return .regularOperation(try parseRegularOperation(), extendedAttributeList)
 
         case .terminal(.readonly):
             return .readonlyAttribute(try parseAttributeRest())
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1497,24 +1377,24 @@ public class Parser {
     func parsePartialDefinition(extendedAttributeList: ExtendedAttributeList) throws -> Partial {
 
         /*
-        PartialDefinition ::
-        interface PartialInterfaceOrPartialMixin
-        PartialDictionary
-        Namespace
-        */
+         PartialDefinition ::
+         interface PartialInterfaceOrPartialMixin
+         PartialDictionary
+         Namespace
+         */
         switch try unwrap(tokens.first) {
         case .terminal(.interface):
             try expect(next: .terminal(.interface))
             return try parsePartialInterfaceOrPartialMixin(extendedAttributeList: extendedAttributeList)
 
-        case let t where firstSet(for: .PartialDictionary).contains(t):
+        case let token where firstSet(for: .PartialDictionary).contains(token):
             return .dictionary(try parsePartialDictionary(), extendedAttributeList)
 
-        case let t where firstSet(for: .Namespace).contains(t):
+        case let token where firstSet(for: .Namespace).contains(token):
             return .namespace(try parseNamespace(extendedAttributeList: []), extendedAttributeList)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1528,16 +1408,16 @@ public class Parser {
          */
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .PartialInterfaceRest).contains(t):
+        case let token where firstSet(for: .PartialInterfaceRest).contains(token):
             return try parsePartialInterfaceRest(extendedAttributeList: extendedAttributeList)
 
-        case let t where firstSet(for: .MixinRest).contains(t):
+        case let token where firstSet(for: .MixinRest).contains(token):
             let mixinRest = try parseMixinRest(extendedAttributeList: [])
             return .mixin(mixinRest, extendedAttributeList)
 
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1614,25 +1494,35 @@ public class Parser {
             let typeWithExtendedAttributes = try parseTypeWithExtendedAttributes()
             let identifier = try parseIdentifier()
             try expect(next: .terminal(.semicolon))
-            return DictionaryMember(identifier: identifier, isRequired: true, extendedAttributeList: extendedAttributeList, dataType: typeWithExtendedAttributes.dataType, extendedAttributesOfDataType: typeWithExtendedAttributes.extendedAttributeList, defaultValue: nil)
+            return DictionaryMember(identifier: identifier,
+                                    isRequired: true,
+                                    extendedAttributeList: extendedAttributeList,
+                                    dataType: typeWithExtendedAttributes.dataType,
+                                    extendedAttributesOfDataType: typeWithExtendedAttributes.extendedAttributeList,
+                                    defaultValue: nil)
 
-        case let t where firstSet(for: .Type).contains(t):
+        case let token where firstSet(for: .Type).contains(token):
             let dataType = try parseType()
             let identifier = try parseIdentifier()
             let defaultValue = try parseDefault()
             try expect(next: .terminal(.semicolon))
-            return DictionaryMember(identifier: identifier, isRequired: false, extendedAttributeList: extendedAttributeList, dataType: dataType, extendedAttributesOfDataType: nil, defaultValue: defaultValue)
+            return DictionaryMember(identifier: identifier,
+                                    isRequired: false,
+                                    extendedAttributeList: extendedAttributeList,
+                                    dataType: dataType,
+                                    extendedAttributesOfDataType: nil,
+                                    defaultValue: defaultValue)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
     func parseEnum(extendedAttributeList: ExtendedAttributeList) throws -> Definition {
 
         /*
-        Enum ::
-        enum identifier { EnumValueList } ;
+         Enum ::
+         enum identifier { EnumValueList } ;
          */
         try expect(next: .terminal(.enum))
         let identifier = try parseIdentifier()
@@ -1659,9 +1549,9 @@ public class Parser {
     func parseEnumValueListComma() throws -> [EnumValue] {
 
         /*
-        EnumValueListComma ::
-        , EnumValueListString
-        ε
+         EnumValueListComma ::
+         , EnumValueListString
+         ε
          */
 
         guard check(forNext: .terminal(.comma)) else {
@@ -1698,7 +1588,7 @@ public class Parser {
         return Typedef(identifier: identifier, dataType: typeWithExtendedAttributes.dataType, extendedAttributeList: typeWithExtendedAttributes.extendedAttributeList)
     }
 
-    func parseTypeWithExtendedAttributes() throws -> TypeWithExtendedAttributes{
+    func parseTypeWithExtendedAttributes() throws -> TypeWithExtendedAttributes {
 
         /*
          TypeWithExtendedAttributes ::
@@ -1719,14 +1609,14 @@ public class Parser {
          */
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .SingleType).contains(t):
+        case let token where firstSet(for: .SingleType).contains(token):
             return .single(try parseSingleType())
 
-        case let t where firstSet(for: .UnionType).contains(t):
+        case let token where firstSet(for: .UnionType).contains(token):
             return .union(try parseUnionType(), try parseNull())
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1740,7 +1630,7 @@ public class Parser {
          */
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .DistinguishableType).contains(t):
+        case let token where firstSet(for: .DistinguishableType).contains(token):
             let distinguishableType = try parseDistinguishableType()
             return .distinguishableType(distinguishableType)
 
@@ -1748,12 +1638,12 @@ public class Parser {
             tokens.removeFirst()
             return .any
 
-        case let t where firstSet(for: .PromiseType).contains(t):
+        case let token where firstSet(for: .PromiseType).contains(token):
             let promise = try parsePromiseType()
             return .promiseType(promise)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1782,22 +1672,22 @@ public class Parser {
          */
 
         switch try unwrap(tokens.first) {
-        case let t where union(firstSet(for: .ExtendedAttributeList), firstSet(for: .DistinguishableType)).contains(t):
+        case let token where union(firstSet(for: .ExtendedAttributeList), firstSet(for: .DistinguishableType)).contains(token):
             let extendedAttributeList = try parseExtendedAttributeList()
             let distinguishableType = try parseDistinguishableType()
             return .distinguishableType(extendedAttributeList, distinguishableType)
 
-        case let t where firstSet(for: .UnionType).contains(t):
+        case let token where firstSet(for: .UnionType).contains(token):
             let unionTypes = try parseUnionType()
             let nullable = try parseNull()
             return .nullableUnionType(unionTypes, nullable)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
-    func parseUnionMemberTypes() throws -> [UnionMemberType]  {
+    func parseUnionMemberTypes() throws -> [UnionMemberType] {
 
         /*
          UnionMemberTypes ::
@@ -1842,12 +1732,12 @@ public class Parser {
          */
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .PrimitiveType).contains(t):
+        case let token where firstSet(for: .PrimitiveType).contains(token):
             let primitiveType = try parsePrimitiveType()
             let nullable = try parseNull()
             return .primitive(primitiveType, nullable)
 
-        case let t where firstSet(for: .StringType).contains(t):
+        case let token where firstSet(for: .StringType).contains(token):
             let stringType = try parseStringType()
             let nullable = try parseNull()
             return .string(stringType, nullable)
@@ -1876,7 +1766,7 @@ public class Parser {
             let nullable = try parseNull()
             return .symbol(nullable)
 
-        case let t where firstSet(for: .BufferRelatedType).contains(t):
+        case let token where firstSet(for: .BufferRelatedType).contains(token):
             let bufferRelatedType = try parseBufferRelatedType()
             let nullable = try parseNull()
             return .bufferRelated(bufferRelatedType, nullable)
@@ -1889,13 +1779,13 @@ public class Parser {
             let nullable = try parseNull()
             return .frozenArray(typeWithExtendedAttribute, nullable)
 
-        case let t where firstSet(for: .RecordType).contains(t):
+        case let token where firstSet(for: .RecordType).contains(token):
             let recordType = try parseRecordType()
             let nullable = try parseNull()
             return .record(recordType, nullable)
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1910,10 +1800,10 @@ public class Parser {
          */
 
         switch try unwrap(tokens.first) {
-        case let t where firstSet(for: .UnsignedIntegerType).contains(t):
+        case let token where firstSet(for: .UnsignedIntegerType).contains(token):
             return .UnsignedIntegerType(try parseUnsignedIntegerType())
 
-        case let t where firstSet(for: .UnrestrictedFloatType).contains(t):
+        case let token where firstSet(for: .UnrestrictedFloatType).contains(token):
             return .UnrestrictedFloatType(try parseUnrestrictedFloatType())
 
         case .terminal(.boolean):
@@ -1928,8 +1818,8 @@ public class Parser {
             tokens.removeFirst()
             return .octet
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -1962,8 +1852,8 @@ public class Parser {
             tokens.removeFirst()
             return .double
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -2001,8 +1891,8 @@ public class Parser {
             tokens.removeFirst()
             return .short
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -2036,8 +1926,8 @@ public class Parser {
             tokens.removeFirst()
             return .USVString
 
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
 
@@ -2095,6 +1985,7 @@ public class Parser {
         check(forNext: .terminal(.questionMark))
     }
 
+    // swiftlint:disable cyclomatic_complexity
     func parseBufferRelatedType() throws -> BufferRelatedType {
 
         /*
@@ -2124,21 +2015,23 @@ public class Parser {
         case .terminal(.Uint8ClampedArray): return .Uint8ClampedArray
         case .terminal(.Float32Array): return .Float32Array
         case .terminal(.Float64Array): return .Float64Array
-        case let t:
-            try unexpected(t)
+        case let token:
+            try unexpected(token)
         }
     }
+    // swiftlint:enable cyclomatic_complexity
 }
 
 // MARK: - First set
 
 func union(_ sets: Set<Token> ...) -> Set<Token> {
 
-    return sets.reduce(Set<Token>()) {
+    sets.reduce(Set<Token>()) {
         $0.union($1)
     }
 }
 
+// swiftlint:disable cyclomatic_complexity function_body_length
 func firstSet(for symbol: NonTerminal) -> Set<Token> {
 
     switch symbol {
@@ -2160,10 +2053,39 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
         )
 
     case .ArgumentNameKeyword:
-        return [.terminal(.async),.terminal(.attribute),.terminal(.callback),.terminal(.const),.terminal(.constructor),.terminal(.deleter),.terminal(.dictionary),.terminal(.enum),.terminal(.getter),.terminal(.includes),.terminal(.inherit),.terminal(.interface),.terminal(.iterable),.terminal(.maplike),.terminal(.mixin),.terminal(.namespace),.terminal(.partial),.terminal(.readonly),.terminal(.required),.terminal(.setlike),.terminal(.setter),.terminal(.static),.terminal(.stringifier),.terminal(.typedef),.terminal(.unrestricted),]
+        return [
+            .terminal(.async),
+            .terminal(.attribute),
+            .terminal(.callback),
+            .terminal(.const),
+            .terminal(.constructor),
+            .terminal(.deleter),
+            .terminal(.dictionary),
+            .terminal(.enum),
+            .terminal(.getter),
+            .terminal(.includes),
+            .terminal(.inherit),
+            .terminal(.interface),
+            .terminal(.iterable),
+            .terminal(.maplike),
+            .terminal(.mixin),
+            .terminal(.namespace),
+            .terminal(.partial),
+            .terminal(.readonly),
+            .terminal(.required),
+            .terminal(.setlike),
+            .terminal(.setter),
+            .terminal(.static),
+            .terminal(.stringifier),
+            .terminal(.typedef),
+            .terminal(.unrestricted),
+        ]
 
     case .CallbackOrInterfaceOrMixin:
-        return [.terminal(.callback), .terminal(.interface)]
+        return [
+            .terminal(.callback),
+            .terminal(.interface)
+        ]
 
     case .InterfaceOrMixin:
         return union(
@@ -2278,10 +2200,18 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
         )
 
     case .BooleanLiteral:
-        return [.terminal(.true), .terminal(.false)]
+        return [
+            .terminal(.true),
+            .terminal(.false),
+        ]
 
     case .FloatLiteral:
-        return [.decimal, .terminal(.negativeInfinity), .terminal(.infinity), .terminal(.nan)]
+        return [
+            .decimal,
+            .terminal(.negativeInfinity),
+            .terminal(.infinity),
+            .terminal(.nan),
+        ]
 
     case .ConstType:
         return union(
@@ -2323,7 +2253,12 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
     case .DefaultValue:
         return union(
             firstSet(for: .ConstValue),
-            [.string, .terminal(.openingSquareBracket), .terminal(.openingCurlyBraces), .terminal(.null)]
+            [
+                .string,
+                .terminal(.openingSquareBracket),
+                .terminal(.openingCurlyBraces),
+                .terminal(.null),
+            ]
         )
 
     case .Operation:
@@ -2339,7 +2274,11 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
         return firstSet(for: .Special)
 
     case .Special:
-        return [.terminal(.getter), .terminal(.setter), .terminal(.deleter)]
+        return [
+            .terminal(.getter),
+            .terminal(.setter),
+            .terminal(.deleter),
+        ]
 
     case .OperationRest:
         return union(
@@ -2537,10 +2476,15 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
         )
 
     case .PrimitiveType:
+        let terminals: Set<Token> = [
+            .terminal(.boolean),
+            .terminal(.byte),
+            .terminal(.octet),
+        ]
         return union(
             firstSet(for: .UnsignedIntegerType),
             firstSet(for: .UnrestrictedFloatType),
-            [.terminal(.boolean), .terminal(.byte),.terminal(.octet)]
+            terminals
         )
 
     case .UnrestrictedFloatType:
@@ -2556,16 +2500,26 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
         )
 
     case .FloatType:
-        return [.terminal(.double),.terminal(.float),]
+        return [
+            .terminal(.double),
+            .terminal(.float),
+        ]
 
     case .IntegerType:
-        return [.terminal(.long),.terminal(.short),]
+        return [
+            .terminal(.long),
+            .terminal(.short),
+        ]
 
     case .OptionalLong:
         return [.terminal(.long)]
 
     case .StringType:
-        return [.terminal(.ByteString), .terminal(.DOMString), .terminal(.USVString)]
+        return [
+            .terminal(.ByteString),
+            .terminal(.DOMString),
+            .terminal(.USVString),
+        ]
 
     case .PromiseType:
         return [.terminal(.promise)]
@@ -2577,7 +2531,19 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
         return [.terminal(.questionMark)]
 
     case .BufferRelatedType:
-        return [.terminal(.ArrayBuffer),.terminal(.DataView),.terminal(.Int8Array),.terminal(.Int16Array),.terminal(.Int32Array),.terminal(.Uint8Array),.terminal(.Uint16Array),.terminal(.Uint32Array),.terminal(.Uint8ClampedArray),.terminal(.Float32Array),.terminal(.Float64Array),]
+        return [
+            .terminal(.ArrayBuffer),
+            .terminal(.DataView),
+            .terminal(.Int8Array),
+            .terminal(.Int16Array),
+            .terminal(.Int32Array),
+            .terminal(.Uint8Array),
+            .terminal(.Uint16Array),
+            .terminal(.Uint32Array),
+            .terminal(.Uint8ClampedArray),
+            .terminal(.Float32Array),
+            .terminal(.Float64Array),
+        ]
 
     case .ExtendedAttributeList :
         return [.terminal(.openingSquareBracket)]
@@ -2586,8 +2552,13 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
         return [.terminal(.comma)]
 
     case .ExtendedAttribute:
+        let terminals: Set<Token> = [
+            .terminal(.openingParenthesis),
+            .terminal(.openingSquareBracket),
+            .terminal(.openingCurlyBraces),
+        ]
         return union(
-            [.terminal(.openingParenthesis), .terminal(.openingSquareBracket), .terminal(.openingCurlyBraces)],
+            terminals,
             firstSet(for: .Other)
         )
 
@@ -2595,54 +2566,62 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
         return firstSet(for: .ExtendedAttribute)
 
     case .ExtendedAttributeInner:
+        let terminals: Set<Token> = [
+            .terminal(.openingParenthesis),
+            .terminal(.openingSquareBracket),
+            .terminal(.openingCurlyBraces),
+        ]
         return union(
-            [.terminal(.openingParenthesis), .terminal(.openingSquareBracket), .terminal(.openingCurlyBraces)],
+            terminals,
             firstSet(for: .OtherOrComma)
         )
 
     case .Other:
+        let terminals: Set<Token> = [
+            .identifier,
+            .integer,
+            .decimal,
+            .string,
+            .other,
+            .terminal(.minus),
+            .terminal(.negativeInfinity),
+            .terminal(.dot),
+            .terminal(.ellipsis),
+            .terminal(.colon),
+            .terminal(.semicolon),
+            .terminal(.openingAngleBracket),
+            .terminal(.equalSign),
+            .terminal(.closingAngleBracket),
+            .terminal(.questionMark),
+            .terminal(.ByteString),
+            .terminal(.DOMString),
+            .terminal(.FrozenArray),
+            .terminal(.infinity),
+            .terminal(.nan),
+            .terminal(.promise),
+            .terminal(.USVString),
+            .terminal(.any),
+            .terminal(.boolean),
+            .terminal(.byte),
+            .terminal(.double),
+            .terminal(.false),
+            .terminal(.float),
+            .terminal(.long),
+            .terminal(.null),
+            .terminal(.object),
+            .terminal(.octet),
+            .terminal(.or),
+            .terminal(.optional),
+            .terminal(.record),
+            .terminal(.sequence),
+            .terminal(.short),
+            .terminal(.symbol),
+            .terminal(.true),
+            .terminal(.unsigned),
+            .terminal(.void),
+        ]
         return union(
-            [.identifier,
-             .integer,
-             .decimal,
-             .string,
-             .other,
-             .terminal(.minus),
-             .terminal(.negativeInfinity),
-             .terminal(.dot),
-             .terminal(.ellipsis),
-             .terminal(.colon),
-             .terminal(.semicolon),
-             .terminal(.openingAngleBracket),
-             .terminal(.equalSign),
-             .terminal(.closingAngleBracket),
-             .terminal(.questionMark),
-             .terminal(.ByteString),
-             .terminal(.DOMString),
-             .terminal(.FrozenArray),
-             .terminal(.infinity),
-             .terminal(.nan),
-             .terminal(.promise),
-             .terminal(.USVString),
-             .terminal(.any),
-             .terminal(.boolean),
-             .terminal(.byte),
-             .terminal(.double),
-             .terminal(.false),
-             .terminal(.float),
-             .terminal(.long),
-             .terminal(.null),
-             .terminal(.object),
-             .terminal(.octet),
-             .terminal(.or),
-             .terminal(.optional),
-             .terminal(.record),
-             .terminal(.sequence),
-             .terminal(.short),
-             .terminal(.symbol),
-             .terminal(.true),
-             .terminal(.unsigned),
-             .terminal(.void)],
+            terminals,
             firstSet(for: .ArgumentNameKeyword),
             firstSet(for: .BufferRelatedType)
         )
@@ -2675,3 +2654,4 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
         return []
     }
 }
+// swiftlint:enable cyclomatic_complexity type_body_length file_length

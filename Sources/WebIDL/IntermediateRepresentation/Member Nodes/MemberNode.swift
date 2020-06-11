@@ -1,7 +1,10 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
-protocol MemberNode: class {
+protocol MemberNode: AnyObject {
 
     var isConstructor: Bool { get }
     var isMethod: Bool { get }
@@ -17,7 +20,7 @@ protocol MemberNode: class {
     func swiftImplementations(inContext: MemberNodeContext) -> [String]
 }
 
-protocol PropertyNode: MemberNode  {
+protocol PropertyNode: MemberNode {
 
     func initializationStatement(forContext: MemberNodeContext) -> String?
 }

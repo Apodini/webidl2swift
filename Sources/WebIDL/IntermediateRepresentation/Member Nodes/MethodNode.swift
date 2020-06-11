@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -14,9 +17,10 @@ class MethodNode: MemberNode, Equatable {
     }
 
     var isMethod: Bool {
-        return true
+        true
     }
 
+    // swiftlint:disable cyclomatic_complexity function_body_length
     private func _swiftDeclaration(inContext context: MemberNodeContext, withImplementation: Bool) -> [String] {
 
         var declarations = [String]()
@@ -44,7 +48,7 @@ class MethodNode: MemberNode, Equatable {
 
             for parameter in parameters {
 
-                let dataTypeNode = parameter.dataType.node!
+                let dataTypeNode = unwrapNode(parameter.dataType)
                 var type: String
                 if dataTypeNode.isProtocol {
                     if dataTypeNode.isOptional {
@@ -69,9 +73,10 @@ class MethodNode: MemberNode, Equatable {
                     if let enumNode = defaultValue.dataType.node as? EnumerationWithRawValueNode {
                         let trimmedDefaultValue = defaultValue.value.trimmingCharacters(in: CharacterSet(charactersIn: "\""))
                         if enumNode.cases.contains(trimmedDefaultValue) {
+                            // swiftlint:disable:next force_unwrapping
                             value = "." + String(trimmedDefaultValue.first!.lowercased() + trimmedDefaultValue.dropFirst())
                         } else {
-                            fatalError()
+                            fatalError("Invalid default value \(trimmedDefaultValue) for enum \(defaultValue.dataType.identifier)")
                         }
                     } else {
                         value = defaultValue.value
@@ -90,12 +95,12 @@ class MethodNode: MemberNode, Equatable {
 
             declaration += "(\(parameterDeclarations.joined(separator: ", ")))"
 
-            declaration += " -> \(returnType.node!.swiftTypeName)"
+            declaration += " -> \(unwrapNode(returnType).swiftTypeName)"
 
             if withImplementation {
 
                 let passedParameters: [String] = parameters.map {
-                    let dataTypeNode = $0.dataType.node!
+                    let dataTypeNode = unwrapNode($0.dataType)
                     if dataTypeNode.isClosure {
 
                         let closureNode: ClosureNode
@@ -106,21 +111,21 @@ class MethodNode: MemberNode, Equatable {
                         } else if let aliasNode = dataTypeNode as? AliasNode, let optionalNode = aliasNode.aliased as? OptionalNode, let cNode = optionalNode.wrapped.node as? ClosureNode {
                             closureNode = cNode
                         } else {
-                            fatalError()
+                            fatalError("Unknown closure type.")
                         }
 
-                        let rt: String
+                        let returnValue: String
                         if closureNode.returnType.identifier == "Void" {
-                            rt = "; return .undefined"
+                            returnValue = "; return .undefined"
                         } else {
-                            rt = ".fromJSValue()"
+                            returnValue = ".fromJSValue()"
                         }
 
                         let argumentCount = closureNode.arguments.count
-                        let closureArguments = (0 ..< argumentCount).map {
-                            "$0[\($0)].fromJSValue()"
-                        }.joined(separator: ", ")
-                        return "JSFunctionRef.from({ \($0.label)(\(closureArguments))\(rt) })"
+                        let closureArguments = (0 ..< argumentCount)
+                            .map { "$0[\($0)].fromJSValue()" }
+                            .joined(separator: ", ")
+                        return "JSFunctionRef.from({ \($0.label)(\(closureArguments))\(returnValue) })"
                     } else {
                         return $0.label + ".jsValue()"
                     }
@@ -132,10 +137,10 @@ class MethodNode: MemberNode, Equatable {
                     _ = objectRef.\(name)!(\(passedParameters.joined(separator: ", ")))
                     }
                     """
-                } else if returnType.node!.isProtocol {
+                } else if unwrapNode(returnType).isProtocol {
                     declaration += """
                      {
-                    return objectRef.\(name)!(\(passedParameters.joined(separator: ", "))).fromJSValue() as \(returnType.node!.typeErasedSwiftType)
+                    return objectRef.\(name)!(\(passedParameters.joined(separator: ", "))).fromJSValue() as \(unwrapNode(returnType).typeErasedSwiftType)
                     }
                     """
                 } else {
@@ -157,18 +162,20 @@ class MethodNode: MemberNode, Equatable {
 
         return declarations
     }
+    // swiftlint:enable cyclomatic_complexity function_body_length
 
     func swiftDeclarations(inContext: MemberNodeContext) -> [String] {
 
-        return _swiftDeclaration(inContext: inContext, withImplementation: false)
+        _swiftDeclaration(inContext: inContext, withImplementation: false)
     }
 
     func swiftImplementations(inContext: MemberNodeContext) -> [String] {
 
-        return _swiftDeclaration(inContext: inContext, withImplementation: true)
+        _swiftDeclaration(inContext: inContext, withImplementation: true)
     }
 
     static func == (lhs: MethodNode, rhs: MethodNode) -> Bool {
-        return lhs.name == rhs.name && lhs.returnType == rhs.returnType && (lhs.parameters.count == rhs.parameters.count && zip(lhs.parameters, rhs.parameters).allSatisfy(equal))
+        lhs.name == rhs.name && lhs.returnType == rhs.returnType &&
+            (lhs.parameters.count == rhs.parameters.count && zip(lhs.parameters, rhs.parameters).allSatisfy(equal))
     }
 }

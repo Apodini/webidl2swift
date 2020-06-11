@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -18,7 +21,7 @@ class ParameterNode: Equatable {
     }
 
     static func == (lhs: ParameterNode, rhs: ParameterNode) -> Bool {
-        return lhs.label == rhs.label &&
+        lhs.label == rhs.label &&
             lhs.isVariadic == rhs.isVariadic &&
             lhs.isOmittable == rhs.isOmittable &&
             lhs.defaultValue == rhs.defaultValue &&
@@ -28,8 +31,8 @@ class ParameterNode: Equatable {
 
 func equal(_ lhs: ParameterNode?, _ rhs: ParameterNode?) -> Bool {
 
-    if let l = lhs, let r = rhs {
-        return l == r
+    if let lhs = lhs, let rhs = rhs {
+        return lhs == rhs
     } else {
         return false
     }

@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -17,49 +20,51 @@ class ProtocolNode: TypeNode, Equatable {
     }
 
     var isProtocol: Bool {
-        return true
+        true
     }
 
     var swiftTypeName: String {
 
-        return typeName
+        typeName
     }
 
     var typeErasedSwiftType: String {
-        return "Any\(swiftTypeName)"
+        "Any\(swiftTypeName)"
     }
 
     var swiftDeclaration: String {
 
         let context = MemberNodeContext.protocolContext(typeName)
 
-        let (namedSubscript, indexedSubscript) = SubscriptNode.mergedSubscriptNodes(requiredMembers.filter({ $0.isSubscript }) as! [SubscriptNode])
+        // swiftlint:disable force_cast
+        let (namedSubscript, indexedSubscript) = SubscriptNode.mergedSubscriptNodes(requiredMembers.filter { $0.isSubscript } as! [SubscriptNode])
+        // swiftlint:enable force_cast
 
-        let inheritsFrom = ["JSBridgedType"] + self.inheritsFrom.map({ $0.node!.swiftTypeName }).sorted()
+        let inheritsFrom = ["JSBridgedType"] + self.inheritsFrom.map { unwrapNode($0).swiftTypeName }.sorted()
         var declaration =  """
-        public protocol \(typeName): \(inheritsFrom.map({ $0 }).joined(separator: ", ")) {
+        public protocol \(typeName): \(inheritsFrom.joined(separator: ", ")) {
 
         """
 
         declaration += "\n"
-        namedSubscript.map { declaration += $0.swiftDeclarations(inContext: context).joined(separator: "\n\n")}
+        namedSubscript.map { declaration += $0.swiftDeclarations(inContext: context).joined(separator: "\n\n") }
         declaration += "\n"
-        indexedSubscript.map { declaration += $0.swiftDeclarations(inContext: context).joined(separator: "\n\n")}
+        indexedSubscript.map { declaration += $0.swiftDeclarations(inContext: context).joined(separator: "\n\n") }
         declaration += "\n"
 
         declaration += requiredMembers
-            .filter({ !$0.isSubscript })
-            .flatMap({
-                return $0.swiftDeclarations(inContext: context)
-            })
+            .filter { !$0.isSubscript }
+            .flatMap { $0.swiftDeclarations(inContext: context) }
             .joined(separator: "\n\n")
 
         declaration += "\n}"
 
         if !defaultImplementations.isEmpty {
 
-            let (namedSubscript, indexedSubscript) = SubscriptNode.mergedSubscriptNodes(requiredMembers.filter({ $0.isSubscript }) as! [SubscriptNode])
-
+            // swiftlint:disable force_cast
+            let (namedSubscript, indexedSubscript) = SubscriptNode.mergedSubscriptNodes(requiredMembers.filter { $0.isSubscript } as! [SubscriptNode])
+            // swiftlint:enable force_cast
+            
             declaration += """
 
 
@@ -69,30 +74,29 @@ class ProtocolNode: TypeNode, Equatable {
             """
 
             declaration += "\n"
-            namedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n")}
+            namedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n") }
             declaration += "\n"
-            indexedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n")}
+            indexedSubscript.map { declaration += $0.swiftImplementations(inContext: context).joined(separator: "\n\n") }
             declaration += "\n"
 
             declaration += defaultImplementations
-                       .filter({ !$0.isSubscript })
-                       .flatMap({
-                           return $0.swiftImplementations(inContext: context)
-                       })
+                       .filter { !$0.isSubscript }
+                       .flatMap {
+                           $0.swiftImplementations(inContext: context)
+                       }
                        .joined(separator: "\n\n")
 
             declaration += "\n}"
-
         }
 
         return declaration
     }
 
     func typeCheck(withArgument argument: String) -> String {
-        return "false"
+        "false"
     }
 
     static func == (lhs: ProtocolNode, rhs: ProtocolNode) -> Bool {
-        return lhs.typeName == rhs.typeName
+        lhs.typeName == rhs.typeName
     }
 }

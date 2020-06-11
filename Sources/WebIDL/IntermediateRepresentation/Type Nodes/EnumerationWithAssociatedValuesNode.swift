@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -12,11 +15,11 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
     }
 
     var isEnum: Bool {
-        return true
+        true
     }
 
     var swiftTypeName: String {
-        return typeName
+        typeName
     }
 
     var swiftDeclaration: String {
@@ -30,54 +33,59 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
         var numberOfAssociateValueOfDictionaryType = 0
         var numberOfAssociateValueOfStringType = 0
         var numberOfAssociateValueOfBoolType = 0
-        for c in cases {
-            let node = c.node!
-            if node.isArray { numberOfAssociateValuesOfArrayType += 1}
-            else if node.isDictionary || node.isRecord { numberOfAssociateValueOfDictionaryType += 1}
-            else if c.identifier == "String" { numberOfAssociateValueOfStringType += 1}
-            else if c.identifier == "Bool" { numberOfAssociateValueOfBoolType += 1}
+        for theCase in cases {
+            let node = unwrapNode(theCase)
+            if node.isArray {
+                numberOfAssociateValuesOfArrayType += 1
+            } else if node.isDictionary || node.isRecord {
+                numberOfAssociateValueOfDictionaryType += 1
+            } else if theCase.identifier == "String" {
+                numberOfAssociateValueOfStringType += 1
+            } else if theCase.identifier == "Bool" {
+                numberOfAssociateValueOfBoolType += 1
+            }
         }
 
-        for c in cases {
+        for theCase in cases {
 
-            let caseName = String(c.identifier.first!.lowercased() + c.identifier.dropFirst())
+            // swiftlint:disable:next force_unwrapping
+            let caseName = String(theCase.identifier.first!.lowercased() + theCase.identifier.dropFirst())
             caseNames.append(caseName)
 
-            let node = c.node!
-
+            let node = unwrapNode(theCase)
 
             if numberOfAssociateValuesOfArrayType == 1, node.isArray {
 
                 protocolConfromances.insert("ExpressibleByArrayLiteral")
+                // swiftlint:disable force_unwrapping
                 protocolImplementations.append("""
-                    public init(arrayLiteral elements: \(c.node!.arrayElementSwiftTypeName!)...) {
+                    public init(arrayLiteral elements: \(node.arrayElementSwiftTypeName!)...) {
                     self = .\(caseName)(elements)
                 }
                 """)
+                // swiftlint:enable force_unwrapping
             } else if numberOfAssociateValueOfDictionaryType == 1, node.isDictionary {
                 protocolConfromances.insert("ExpressibleByDictionaryLiteral")
                 protocolImplementations.append("""
-                public init(dictionaryLiteral elements: (\(c.identifier).Key, \(c.identifier).Value)...) {
+                public init(dictionaryLiteral elements: (\(theCase.identifier).Key, \(theCase.identifier).Value)...) {
                     self = .\(caseName)(.init(uniqueKeysWithValues: elements))
                 }
                 """)
-
             } else if numberOfAssociateValueOfDictionaryType == 1, node.isRecord {
                 protocolConfromances.insert("ExpressibleByDictionaryLiteral")
                 protocolImplementations.append("""
-                public init(dictionaryLiteral elements: (String, \(c.identifier).Value)...) {
+                public init(dictionaryLiteral elements: (String, \(theCase.identifier).Value)...) {
                     self = .\(caseName)(.init(uniqueKeysWithValues: elements))
                 }
                 """)
-
-            } else if numberOfAssociateValueOfStringType == 1, c.identifier == "String" {
+            } else if numberOfAssociateValueOfStringType == 1, theCase.identifier == "String" {
                 protocolConfromances.insert("ExpressibleByStringLiteral")
                 protocolImplementations.append("""
                 public init(stringLiteral value: String) {
                     self = .\(caseName)(value)
                 }
                 """)
-            } else if numberOfAssociateValueOfBoolType == 1, c.identifier == "Bool" {
+            } else if numberOfAssociateValueOfBoolType == 1, theCase.identifier == "Bool" {
                 protocolConfromances.insert("ExpressibleByBooleanLiteral")
                 protocolImplementations.append("""
                 public init(booleanLiteral value: Bool) {
@@ -93,7 +101,7 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
             public enum \(typeName): \(inheritance.joined(separator: ", ")) {
 
                 public static func canDecode(from jsValue: JSValue) -> Bool {
-                    return \(cases.map({ "\($0.node!.swiftTypeName).canDecode(from: jsValue)" }).joined(separator: " || "))
+                    return \(cases.map { "\(unwrapNode($0).swiftTypeName).canDecode(from: jsValue)" }.joined(separator: " || "))
                 }
 
             
@@ -101,19 +109,18 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
 
         var initMap = [String]()
         declaration += zip(caseNames, cases)
-            .map({
+            .map {
+                let (caseName, nodePointer) = $0
+                let typeName = unwrapNode(nodePointer).swiftTypeName
 
-            let (caseName, nodePointer) = $0
-            let typeName = nodePointer.node!.swiftTypeName
-
-            initMap.append("""
-            if \(typeName).canDecode(from: jsValue) {
-                self = .\(caseName)(jsValue.fromJSValue())
-            }
-            """)
+                initMap.append("""
+                    if \(typeName).canDecode(from: jsValue) {
+                        self = .\(caseName)(jsValue.fromJSValue())
+                    }
+                    """)
 
                 return "case \(caseName)(\(typeName))"
-            })
+            }
             .joined(separator: "\n")
 
         initMap.append("""
@@ -139,7 +146,7 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
         public func jsValue() -> JSValue {
 
             switch self {
-            \(caseNames.map({ "case .\($0)(let v): return v.jsValue()" }).joined(separator: "\n"))
+            \(caseNames.map { "case .\($0)(let v): return v.jsValue()" }.joined(separator: "\n"))
             }
         }
         """
@@ -150,6 +157,6 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
     }
 
     static func == (lhs: EnumerationWithAssociatedValuesNode, rhs: EnumerationWithAssociatedValuesNode) -> Bool {
-        return lhs.cases == rhs.cases
+        lhs.cases == rhs.cases
     }
 }

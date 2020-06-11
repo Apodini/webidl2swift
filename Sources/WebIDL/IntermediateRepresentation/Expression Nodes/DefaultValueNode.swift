@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -12,6 +15,6 @@ class DefaultValueNode: ExpressionNode, Equatable {
     }
 
     static func == (lhs: DefaultValueNode, rhs: DefaultValueNode) -> Bool {
-        return lhs.value == rhs.value && lhs.dataType == rhs.dataType
+        lhs.value == rhs.value && lhs.dataType == rhs.dataType
     }
 }

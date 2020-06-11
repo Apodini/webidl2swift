@@ -1,7 +1,10 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
-public protocol TypeNode: class {
+public protocol TypeNode: AnyObject {
 
     var isOptional: Bool { get }
     var isClosure: Bool { get }
@@ -24,7 +27,7 @@ public protocol TypeNode: class {
 
     var numberOfClosureArguments: Int { get }
 
-    var arrayElementSwiftTypeName: String? {get}
+    var arrayElementSwiftTypeName: String? { get }
 }
 
 extension TypeNode {
@@ -55,37 +58,39 @@ extension TypeNode {
     var arrayElementSwiftTypeName: String? { nil }
 }
 
+// swiftlint:disable cyclomatic_complexity
 func equal(_ lhs: TypeNode, _ rhs: TypeNode) -> Bool {
 
-    if let l = lhs as? ArrayNode, let r = rhs as? ArrayNode {
-        return l == r
-    } else if let l = lhs as? OptionalNode, let r = rhs as? OptionalNode {
-        return l == r
-    } else if let l = lhs as? DictionaryNode, let r = rhs as? DictionaryNode {
-        return l == r
-    } else if let l = lhs as? ClosureNode, let r = rhs as? ClosureNode {
-        return l == r
-    } else if let l = lhs as? AliasNode, let r = rhs as? AliasNode {
-        return l == r
-    } else if let l = lhs as? EnumerationWithRawValueNode, let r = rhs as? EnumerationWithRawValueNode {
-        return l == r
-    } else if let l = lhs as? BasicTypeNode, let r = rhs as? BasicTypeNode {
-            return l == r
-    } else if let l = lhs as? BasicArrayTypeNode, let r = rhs as? BasicArrayTypeNode {
-            return l == r
-    } else if let l = lhs as? EnumerationWithAssociatedValuesNode, let r = rhs as? EnumerationWithAssociatedValuesNode {
-        return l == r
-    } else if let l = lhs as? ClassNode, let r = rhs as? ClassNode {
-        return l == r
-    } else if let l = lhs as? NamespaceNode, let r = rhs as? NamespaceNode {
-        return l == r
-    } else if let l = lhs as? ProtocolNode, let r = rhs as? ProtocolNode {
-        return l == r
-    } else if let l = lhs as? TypeErasedWrapperStructNode, let r = rhs as? TypeErasedWrapperStructNode {
-        return l == r
-    } else if let l = lhs as? RecordNode, let r = rhs as? RecordNode {
-        return l == r
+    if let lhs = lhs as? ArrayNode, let rhs = rhs as? ArrayNode {
+        return lhs == rhs
+    } else if let lhs = lhs as? OptionalNode, let rhs = rhs as? OptionalNode {
+        return lhs == rhs
+    } else if let lhs = lhs as? DictionaryNode, let rhs = rhs as? DictionaryNode {
+        return lhs == rhs
+    } else if let lhs = lhs as? ClosureNode, let rhs = rhs as? ClosureNode {
+        return lhs == rhs
+    } else if let lhs = lhs as? AliasNode, let rhs = rhs as? AliasNode {
+        return lhs == rhs
+    } else if let lhs = lhs as? EnumerationWithRawValueNode, let rhs = rhs as? EnumerationWithRawValueNode {
+        return lhs == rhs
+    } else if let lhs = lhs as? BasicTypeNode, let rhs = rhs as? BasicTypeNode {
+            return lhs == rhs
+    } else if let lhs = lhs as? BasicArrayTypeNode, let rhs = rhs as? BasicArrayTypeNode {
+            return lhs == rhs
+    } else if let lhs = lhs as? EnumerationWithAssociatedValuesNode, let rhs = rhs as? EnumerationWithAssociatedValuesNode {
+        return lhs == rhs
+    } else if let lhs = lhs as? ClassNode, let rhs = rhs as? ClassNode {
+        return lhs == rhs
+    } else if let lhs = lhs as? NamespaceNode, let rhs = rhs as? NamespaceNode {
+        return lhs == rhs
+    } else if let lhs = lhs as? ProtocolNode, let rhs = rhs as? ProtocolNode {
+        return lhs == rhs
+    } else if let lhs = lhs as? TypeErasedWrapperStructNode, let rhs = rhs as? TypeErasedWrapperStructNode {
+        return lhs == rhs
+    } else if let lhs = lhs as? RecordNode, let rhs = rhs as? RecordNode {
+        return lhs == rhs
     } else {
         return false
     }
 }
+// swiftlint:enable cyclomatic_complexity

@@ -1,3 +1,6 @@
+//
+//  Created by Manuel Burghard. Licensed unter MIT.
+//
 
 import Foundation
 
@@ -14,11 +17,11 @@ class DictionaryNode: TypeNode, Equatable {
     }
 
     var isDictionary: Bool {
-        return true
+        true
     }
 
     var swiftTypeName: String {
-        return typeName
+        typeName
     }
 
     var cases: [String] {
@@ -28,10 +31,10 @@ class DictionaryNode: TypeNode, Equatable {
                 fatalError("Expected Dictionary as base of other Dictionary")
             }
 
-            struct Orderer<Element: Hashable>: Hashable {
+            struct Ordered<Element: Hashable>: Hashable {
 
-                static func == (lhs: Orderer<Element>, rhs: Orderer<Element>) -> Bool {
-                    return lhs.value == rhs.value
+                static func == (lhs: Ordered<Element>, rhs: Ordered<Element>) -> Bool {
+                    lhs.value == rhs.value
                 }
 
                 let value: Element
@@ -42,10 +45,12 @@ class DictionaryNode: TypeNode, Equatable {
                 }
             }
             var counter = 0
-            var orderedSet = Set<Orderer<String>>(baseDictionaryNode.cases.map({ let r = Orderer(value: $0, index: counter); counter += 1; return r}))
-            orderedSet.formUnion(members.map({ let r = Orderer(value: $0, index: counter); counter += 1; return r}))
+            var orderedSet = Set<Ordered<String>>(baseDictionaryNode.cases.map { let ordered = Ordered(value: $0, index: counter); counter += 1; return ordered })
+            orderedSet.formUnion(members.map { let ordered = Ordered(value: $0, index: counter); counter += 1; return ordered })
 
-            return orderedSet.sorted(by: { $0.index < $1.index }).map({ $0.value })
+            return orderedSet
+                .sorted { $0.index < $1.index }
+                .map { $0.value }
         } else {
             return members
         }
@@ -96,10 +101,10 @@ class DictionaryNode: TypeNode, Equatable {
     }
 
     func typeCheck(withArgument argument: String) -> String {
-        return "case .object = \(argument)"
+        "case .object = \(argument)"
     }
 
     static func == (lhs: DictionaryNode, rhs: DictionaryNode) -> Bool {
-        return lhs.typeName == rhs.typeName
+        lhs.typeName == rhs.typeName
     }
 }
