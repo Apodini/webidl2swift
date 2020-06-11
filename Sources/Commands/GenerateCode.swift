@@ -40,7 +40,15 @@ public struct GenerateCode: ParsableCommand {
         }
 
         let parser = Parser(input: tokenisationResult)
-        let definitions = try parser.parse()
+        let definitions: [Definition]
+        do {
+            definitions = try parser.parse()
+        } catch let error as Parser.Error {
+            print(error.localizedDescription)
+            Self.exit(withError: ExitCode.failure)
+        } catch {
+            throw error
+        }
 
         var configuration = Configuration()
         configuration.indentation = .spaces(4)
@@ -49,9 +57,7 @@ public struct GenerateCode: ParsableCommand {
         let codeGenerator = IRGenerator()
         let ir = codeGenerator.generateIR(for: definitions)
 
-        let undefinedTypes = ir.filter {
-            $0.value.node == nil
-        }
+        let undefinedTypes = ir.undefinedTypes
 
         guard undefinedTypes.isEmpty else {
             print("Error: The following types are undefined:")
@@ -90,7 +96,7 @@ public struct GenerateCode: ParsableCommand {
                 .library(name: "WebAPI", targets: ["WebAPI"]),
             ],
             dependencies: [
-                .package(name: "JavaScriptKit", path: "../JavaScriptKit"),
+                .package(name: "JavaScriptKit", url: "https://github.com/Unkaputtbar/JavaScriptKit.git", .branch("feature/webidl-support")),
                 .package(name: "ECMAScript", path: "../ECMAScript"),
             ],
             targets: [

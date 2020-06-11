@@ -89,11 +89,7 @@ class SubscriptNode: MemberNode, Equatable {
             if isSetter && isDeleter {
             declaration += """
             set {
-                if let newValue = newValue  {
-                    \(lookup) = newValue.jsValue()
-                } else {
-                    \(lookup) = .null
-                }
+                \(lookup) = newValue.jsValue()
             }
             """
             } else if isSetter {

@@ -84,7 +84,7 @@ class ClassNode: TypeNode, Equatable {
         }
 
         declaration += "\n"
-        members.map { declaration += $0.typealiases.joined(separator: "\n")}
+        members.forEach { declaration += $0.typealiases.joined(separator: "\n")}
         declaration += "\n"
 
         declaration += "\n"

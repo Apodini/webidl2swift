@@ -73,6 +73,12 @@ public class IntermediateRepresentation: Collection {
         return nodes[index]
     }
 
+    public var undefinedTypes: [Element]  {
+        return filter {
+            $0.value.node == nil
+        }
+    }
+
     private func existingOrNewNodePointer(for typeName: String) -> NodePointer {
 
         if let alreadyRegisterd = nodes[typeName] {

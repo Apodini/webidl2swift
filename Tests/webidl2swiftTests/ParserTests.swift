@@ -158,7 +158,7 @@ final class ParserTests: XCTestCase {
 
         let result = try Tokenizer.tokenize("""
         callback interface A {
-            void handle();
+            void handle(any... data);
         };
         """)
         let parser = Parser(input: result)
@@ -166,7 +166,7 @@ final class ParserTests: XCTestCase {
 
         XCTAssertEqual(definitions as! [CallbackInterface], [
             CallbackInterface(identifer: "A", extendedAttributeList: [], callbackInterfaceMembers: [
-                .regularOperation(.init(returnType: .void, operationName: .identifier("handle"), argumentList: []), [])
+                .regularOperation(.init(returnType: .void, operationName: .identifier("handle"), argumentList: [.init(rest: .nonOptional(.single(.any), true, .identifier("data")), extendedAttributeList: [])]), [])
             ])
         ])
     }

@@ -3,6 +3,26 @@ import Foundation
 
 public class Parser {
 
+    public enum Error: Swift.Error {
+
+        case unexpectedEndOfInput
+        case unexpectedToken(Token)
+        case incorrectToken(expected: Token, got: Token)
+
+        var localizedDescription: String {
+
+            switch self {
+
+            case .unexpectedEndOfInput:
+                return "Unexpected end of input"
+            case .unexpectedToken(let token):
+                return "Encountered unexpected token \(token)"
+            case .incorrectToken(let expected, let got):
+                return "Encountered enexpected token \(got), but expected \(expected)"
+            }
+        }
+    }
+
     var tokens: Tokens
     var identifiers: [String]
     var integers: [Int]
@@ -27,19 +47,20 @@ public class Parser {
         self.others = input.others
     }
 
-    func expect(next: Token) {
+    func expect(next: Token) throws {
 
         while case .comment = tokens.first {
             print("Skipping comment")
             tokens.removeFirst()
         }
         
-        guard let nextCharacter = tokens.first else {
-            fatalError("No input left")
+        guard let actual = tokens.first else {
+
+            throw Error.unexpectedEndOfInput
         }
 
-        guard nextCharacter == next else {
-            fatalError("Wrong token: Expected \(next), but got \(nextCharacter)")
+        guard actual == next else {
+            throw Error.incorrectToken(expected: next, got: actual)
         }
 
         tokens.removeFirst()
@@ -58,10 +79,24 @@ public class Parser {
         return true
     }
 
+    func unwrap<Type>(_ input: Type?) throws -> Type {
+
+        guard let input = input else {
+            throw Error.unexpectedEndOfInput
+        }
+        return input
+    }
+
+    func unexpected(_ input: Token) throws -> Never {
+        throw Error.unexpectedToken(input)
+    }
+
     public func parse() throws -> [Definition] {
 
         return try parseDefinitions()
     }
+
+    // MARK: - Rules
 
     func parseDefinitions() throws -> [Definition] {
 
@@ -202,18 +237,6 @@ public class Parser {
         }
     }
 
-    func unwrap<Type>(_ input: Type?) throws -> Type {
-
-        guard let input = input else {
-            fatalError("Unexpected end of input!")
-        }
-        return input
-    }
-
-    func unexpected<Type>(_ input: Type) throws -> Never {
-        fatalError("Unexpected Token: \(input)")
-    }
-
     func parseInterfaceOrMixin(extendedAttributeList: ExtendedAttributeList) throws -> Definition {
 
         /*
@@ -237,10 +260,10 @@ public class Parser {
 
         let identifier = try parseIdentifier()
         let inheritance = try parseInheritance()
-        expect(next: .terminal(.openingCurlyBraces))
+        try expect(next: .terminal(.openingCurlyBraces))
         let interfaceMembers = try parseInterfaceMembers()
-        expect(next: .terminal(.closingCurlyBraces))
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.closingCurlyBraces))
+        try expect(next: .terminal(.semicolon))
 
         return Interface(identifier: identifier, extendedAttributeList: extendedAttributeList, inheritance: inheritance, members: interfaceMembers)
     }
@@ -260,7 +283,7 @@ public class Parser {
 
         let list = try [extendedAttribute] + parseExtendedAttributes()
 
-        expect(next: .terminal(.closingSquareBracket))
+        try expect(next: .terminal(.closingSquareBracket))
 
         return list
     }
@@ -277,21 +300,21 @@ public class Parser {
         //
         //        switch try unwrap(tokens.first) {
         //        case .terminal(.openingParenthesis):
-        //            expect(next: .terminal(.openingParenthesis))
+        //            try expect(next: .terminal(.openingParenthesis))
         //            try parseExtendedAttributeInner()
-        //            expect(next: .terminal(.closingParenthesis))
+        //            try expect(next: .terminal(.closingParenthesis))
         //            try parseExtendedAttributeRest()
         //
         //        case .terminal(.openingSquareBracket):
-        //            expect(next: .terminal(.openingSquareBracket))
+        //            try expect(next: .terminal(.openingSquareBracket))
         //            try parseExtendedAttributeInner()
-        //            expect(next: .terminal(.closingSquareBracket))
+        //            try expect(next: .terminal(.closingSquareBracket))
         //            try parseExtendedAttributeRest()
         //
         //        case .terminal(.openingCurlyBraces):
-        //            expect(next: .terminal(.openingCurlyBraces))
+        //            try expect(next: .terminal(.openingCurlyBraces))
         //            try parseExtendedAttributeInner()
-        //            expect(next: .terminal(.closingCurlyBraces))
+        //            try expect(next: .terminal(.closingCurlyBraces))
         //            try parseExtendedAttributeRest()
         //
         //        case let t where firstSet(for: .Other).contains(t):
@@ -310,9 +333,9 @@ public class Parser {
             tokens.removeFirst()
             identifier = identifiers.removeFirst()
 
-        case .nonTerminal(.Default):
-            tokens.removeFirst()
-            identifier = "Default"
+//        case .nonTerminal(.Default):
+//            tokens.removeFirst()
+//            identifier = "Default"
 
         case let t:
             try unexpected(t)
@@ -346,16 +369,16 @@ public class Parser {
          ExtendedAttributeArgList ::
          identifier ( ArgumentList )
          */
-        expect(next: .terminal(.openingParenthesis))
+        try expect(next: .terminal(.openingParenthesis))
         let argumentList = try parseArgumentList()
-        expect(next: .terminal(.closingParenthesis))
+        try expect(next: .terminal(.closingParenthesis))
 
         return .argumentList(identifier, argumentList)
     }
 
     func parseExtendedAttributeIntermediate(withIdentifier identifier: String) throws -> ExtendedAttribute {
 
-        expect(next: .terminal(.equalSign))
+        try expect(next: .terminal(.equalSign))
 
         switch try unwrap(tokens.first) {
         case .terminal(.openingParenthesis):
@@ -394,9 +417,9 @@ public class Parser {
          ExtendedAttributeIdentList ::
          identifier = ( IdentifierList )
          */
-        expect(next: .terminal(.openingParenthesis))
+        try expect(next: .terminal(.openingParenthesis))
         let identifierList = try parseIdentifierList()
-        expect(next: .terminal(.closingParenthesis))
+        try expect(next: .terminal(.closingParenthesis))
 
         return .identifierList(identifier, identifierList)
     }
@@ -407,9 +430,9 @@ public class Parser {
          identifier = identifier ( ArgumentList )
          */
 
-        expect(next: .terminal(.openingParenthesis))
+        try expect(next: .terminal(.openingParenthesis))
         let argumentList = try parseArgumentList()
-        expect(next: .terminal(.closingParenthesis))
+        try expect(next: .terminal(.closingParenthesis))
 
         return .namedArgumentList(identifier, otherIdentifier, argumentList)
     }
@@ -456,25 +479,25 @@ public class Parser {
 //
 //        switch try unwrap(tokens.first) {
 //        case .terminal(.openingParenthesis):
-//            expect(next: .terminal(.openingParenthesis))
+//            try expect(next: .terminal(.openingParenthesis))
 //            let inner0 = try parseExtendedAttributeInner()
-//            expect(next: .terminal(.closingParenthesis))
+//            try expect(next: .terminal(.closingParenthesis))
 //            let inner1 = try parseExtendedAttributeInner()
 //            // TODO:
 //            return nil
 //
 //        case .terminal(.openingSquareBracket):
-//            expect(next: .terminal(.openingSquareBracket))
+//            try expect(next: .terminal(.openingSquareBracket))
 //            let inner0 = try parseExtendedAttributeInner()
-//            expect(next: .terminal(.closingSquareBracket))
+//            try expect(next: .terminal(.closingSquareBracket))
 //            let inner1 = try parseExtendedAttributeInner()
 //            // TODO:
 //            return nil
 //
 //        case .terminal(.openingCurlyBraces):
-//            expect(next: .terminal(.openingCurlyBraces))
+//            try expect(next: .terminal(.openingCurlyBraces))
 //            let inner0 = try parseExtendedAttributeInner()
-//            expect(next: .terminal(.closingCurlyBraces))
+//            try expect(next: .terminal(.closingCurlyBraces))
 //            let inner1 = try parseExtendedAttributeInner()
 //            // TODO:
 //            return nil
@@ -564,12 +587,12 @@ public class Parser {
             return try parseCallbackRest(extendedAttributeList: extendedAttributeList)
 
         case .terminal(.interface):
-            expect(next: .terminal(.interface))
+            try expect(next: .terminal(.interface))
             let identifer = try parseIdentifier()
-            expect(next: .terminal(.openingCurlyBraces))
+            try expect(next: .terminal(.openingCurlyBraces))
             let callbackInterfaceMembers = try parseCallbackInterfaceMembers()
-            expect(next: .terminal(.closingCurlyBraces))
-            expect(next: .terminal(.semicolon))
+            try expect(next: .terminal(.closingCurlyBraces))
+            try expect(next: .terminal(.semicolon))
             return CallbackInterface(identifer: identifer, extendedAttributeList: extendedAttributeList, callbackInterfaceMembers: callbackInterfaceMembers)
 
         case let t:
@@ -580,12 +603,12 @@ public class Parser {
     func parseCallbackRest(extendedAttributeList: ExtendedAttributeList) throws -> Callback {
 
         let identifier = try parseIdentifier()
-        expect(next: .terminal(.equalSign))
+        try expect(next: .terminal(.equalSign))
         let returnType = try parseReturnType()
-        expect(next: .terminal(.openingParenthesis))
+        try expect(next: .terminal(.openingParenthesis))
         let argumentList = try parseArgumentList()
-        expect(next: .terminal(.closingParenthesis))
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.closingParenthesis))
+        try expect(next: .terminal(.semicolon))
 
         return Callback(identifier: identifier, extendedAttributeList: extendedAttributeList, returnType: returnType, argumentList: argumentList)
     }
@@ -633,12 +656,12 @@ public class Parser {
          MixinRest ::
          mixin identifier { MixinMembers } ;
          */
-        expect(next: .terminal(.mixin))
+        try expect(next: .terminal(.mixin))
         let identifer = try parseIdentifier()
-        expect(next: .terminal(.openingCurlyBraces))
+        try expect(next: .terminal(.openingCurlyBraces))
         let mixinMembers = try parseMixinMembers()
-        expect(next: .terminal(.closingCurlyBraces))
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.closingCurlyBraces))
+        try expect(next: .terminal(.semicolon))
         return Mixin(identifier: identifer, extendedAttributeList: extendedAttributeList, members: mixinMembers)
     }
 
@@ -823,10 +846,10 @@ public class Parser {
     func parseOperationRest() throws -> OperationRest {
 
         let name = try parseOptionalOperationName()
-        expect(next: .terminal(.openingParenthesis))
+        try expect(next: .terminal(.openingParenthesis))
         let arguments = try parseArgumentList()
-        expect(next: .terminal(.closingParenthesis))
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.closingParenthesis))
+        try expect(next: .terminal(.semicolon))
 
         return OperationRest(optioalOperationName: name, argumentList: arguments)
     }
@@ -873,7 +896,7 @@ public class Parser {
          includes
          */
 
-        expect(next: .terminal(.includes))
+        try expect(next: .terminal(.includes))
         return .includes
     }
 
@@ -918,7 +941,7 @@ public class Parser {
              stringifier StringifierRest
          */
 
-        expect(next: .terminal(.stringifier))
+        try expect(next: .terminal(.stringifier))
         return try parseStringifierRest()
     }
 
@@ -966,10 +989,10 @@ public class Parser {
          attribute TypeWithExtendedAttributes AttributeName ;
          */
 
-        expect(next: .terminal(.attribute))
+        try expect(next: .terminal(.attribute))
         let typeWithExtendedAttributes = try parseTypeWithExtendedAttributes()
         let attributeName = try parseAttributeName()
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.semicolon))
         return AttributeRest(typeWithExtendedAttributes: typeWithExtendedAttributes, attributeName: attributeName)
     }
 
@@ -1021,7 +1044,7 @@ public class Parser {
          StaticMember ::
          static StaticMemberRest
          */
-        expect(next: .terminal(.static))
+        try expect(next: .terminal(.static))
         return try parseStaticMemberRest()
     }
 
@@ -1050,12 +1073,12 @@ public class Parser {
          Iterable ::
          iterable < TypeWithExtendedAttributes OptionalType > ;
          */
-        expect(next: .terminal(.iterable))
-        expect(next: .terminal(.openingAngleBracket))
+        try expect(next: .terminal(.iterable))
+        try expect(next: .terminal(.openingAngleBracket))
         let typeWithExtendedAttributes0 = try parseTypeWithExtendedAttributes()
         let optionalType = try parseOptionalType()
-        expect(next: .terminal(.closingAngleBracket))
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.closingAngleBracket))
+        try expect(next: .terminal(.semicolon))
 
         return Iterable(typeWithExtendedAttributes0: typeWithExtendedAttributes0, typeWithExtendedAttributes1: optionalType)
     }
@@ -1079,21 +1102,21 @@ public class Parser {
          AsyncIterable ::
          async iterable < TypeWithExtendedAttributes , TypeWithExtendedAttributes > ;
          */
-        expect(next: .terminal(.async))
-        expect(next: .terminal(.iterable))
-        expect(next: .terminal(.openingAngleBracket))
+        try expect(next: .terminal(.async))
+        try expect(next: .terminal(.iterable))
+        try expect(next: .terminal(.openingAngleBracket))
         let typeWithExtendedAttributes0 = try parseTypeWithExtendedAttributes()
-        expect(next: .terminal(.comma))
+        try expect(next: .terminal(.comma))
         let typeWithExtendedAttribute1 = try parseTypeWithExtendedAttributes()
-        expect(next: .terminal(.closingAngleBracket))
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.closingAngleBracket))
+        try expect(next: .terminal(.semicolon))
 
         return AsyncIterable(typeWithExtendedAttributes0: typeWithExtendedAttributes0, typeWithExtendedAttributes1: typeWithExtendedAttribute1)
     }
 
     func parseReadOnlyMember(extendedAttributeList: ExtendedAttributeList) throws -> InterfaceMember {
 
-        expect(next: .terminal(.readonly))
+        try expect(next: .terminal(.readonly))
         let readOnlyMember = try parseReadOnlyMemberRest()
         return .readOnlyMember(readOnlyMember, extendedAttributeList)
     }
@@ -1128,13 +1151,13 @@ public class Parser {
          MaplikeRest ::
          maplike < TypeWithExtendedAttributes , TypeWithExtendedAttributes > ;
          */
-        expect(next: .terminal(.maplike))
-        expect(next: .terminal(.openingAngleBracket))
+        try expect(next: .terminal(.maplike))
+        try expect(next: .terminal(.openingAngleBracket))
         let keyType = try parseTypeWithExtendedAttributes()
-        expect(next: .terminal(.comma))
+        try expect(next: .terminal(.comma))
         let valueType = try parseTypeWithExtendedAttributes()
-        expect(next: .terminal(.closingAngleBracket))
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.closingAngleBracket))
+        try expect(next: .terminal(.semicolon))
         return MaplikeRest(keyType: keyType, valueType: valueType)
     }
 
@@ -1144,11 +1167,11 @@ public class Parser {
          SetlikeRest ::
          setlike < TypeWithExtendedAttributes > ;
          */
-        expect(next: .terminal(.setlike))
-        expect(next: .terminal(.openingAngleBracket))
+        try expect(next: .terminal(.setlike))
+        try expect(next: .terminal(.openingAngleBracket))
         let typeWithExtendedAttributes = try parseTypeWithExtendedAttributes()
-        expect(next: .terminal(.closingAngleBracket))
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.closingAngleBracket))
+        try expect(next: .terminal(.semicolon))
 
         return SetlikeRest(dataType: typeWithExtendedAttributes)
     }
@@ -1176,18 +1199,18 @@ public class Parser {
 
     func parseIdentifier() throws -> String {
 
-        expect(next: .identifier)
+        try expect(next: .identifier)
         return identifiers.removeFirst()
     }
 
     func parseConst() throws -> Const {
 
-        expect(next: .terminal(.const))
+        try expect(next: .terminal(.const))
         let constType = try parseConstType()
         let identifier = try parseIdentifier()
-        expect(next: .terminal(.equalSign))
+        try expect(next: .terminal(.equalSign))
         let constValue = try parseConstValue()
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.semicolon))
         return Const(identifier: identifier, constType: constType, constValue: constValue)
     }
 
@@ -1198,7 +1221,7 @@ public class Parser {
             return .primitiveType(try parsePrimitiveType())
 
         case .identifier:
-            expect(next: .identifier)
+            try expect(next: .identifier)
             return .identifier(identifiers.removeFirst())
 
         case let t:
@@ -1208,11 +1231,11 @@ public class Parser {
 
     func parseConstructor(extendedAttributeList: ExtendedAttributeList) throws -> InterfaceMember {
 
-        expect(next: .terminal(.constructor))
-        expect(next: .terminal(.openingParenthesis))
+        try expect(next: .terminal(.constructor))
+        try expect(next: .terminal(.openingParenthesis))
         let arguments = try parseArgumentList()
-        expect(next: .terminal(.closingParenthesis))
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.closingParenthesis))
+        try expect(next: .terminal(.semicolon))
         return .constructor(arguments, extendedAttributeList)
     }
 
@@ -1253,7 +1276,7 @@ public class Parser {
          */
         switch try unwrap(tokens.first) {
         case .terminal(.optional):
-            expect(next: .terminal(.optional))
+            try expect(next: .terminal(.optional))
             let typeWithExtendedAttributes = try parseTypeWithExtendedAttributes()
             let argumentName = try parseArgumentName()
             let defaultValue = try parseDefault()
@@ -1323,21 +1346,21 @@ public class Parser {
 
         switch try unwrap(tokens.first) {
         case .string:
-            expect(next: .string)
+            try expect(next: .string)
             return .string(strings.removeFirst())
 
         case .terminal(.null):
-            expect(next: .terminal(.null))
+            try expect(next: .terminal(.null))
             return .null
 
         case .terminal(.openingSquareBracket):
-            expect(next: .terminal(.openingSquareBracket))
-            expect(next: .terminal(.closingSquareBracket))
+            try expect(next: .terminal(.openingSquareBracket))
+            try expect(next: .terminal(.closingSquareBracket))
             return .emptyList
 
         case .terminal(.openingCurlyBraces):
-            expect(next: .terminal(.openingCurlyBraces))
-            expect(next: .terminal(.closingCurlyBraces))
+            try expect(next: .terminal(.openingCurlyBraces))
+            try expect(next: .terminal(.closingCurlyBraces))
             return .emptyDictionary
 
         case let t where firstSet(for: .ConstValue).contains(t):
@@ -1358,7 +1381,7 @@ public class Parser {
             return .floatLiteral(try parseFloatLiteral())
 
         case .integer:
-            expect(next: .integer)
+            try expect(next: .integer)
             return .integer(integers.removeFirst())
 
         case let t:
@@ -1370,11 +1393,11 @@ public class Parser {
 
         switch try unwrap(tokens.first) {
         case .terminal(.true):
-            expect(next: .terminal(.true))
+            try expect(next: .terminal(.true))
             return true
 
         case .terminal(.false):
-            expect(next: .terminal(.false))
+            try expect(next: .terminal(.false))
             return false
 
         case let t:
@@ -1387,19 +1410,19 @@ public class Parser {
         switch try unwrap(tokens.first) {
 
         case .decimal:
-            expect(next: .decimal)
+            try expect(next: .decimal)
             return .decimal(decimals.removeFirst())
 
         case .terminal(.negativeInfinity):
-            expect(next: .terminal(.negativeInfinity))
+            try expect(next: .terminal(.negativeInfinity))
             return .negativeInfinity
 
         case .terminal(.infinity):
-            expect(next: .terminal(.infinity))
+            try expect(next: .terminal(.infinity))
             return .infinity
 
         case .terminal(.nan):
-        expect(next: .terminal(.nan))
+        try expect(next: .terminal(.nan))
         return .notANumber
             
         case let t:
@@ -1414,12 +1437,12 @@ public class Parser {
              namespace identifier { NamespaceMembers } ;
          */
 
-        expect(next: .terminal(.namespace))
+        try expect(next: .terminal(.namespace))
         let identifier = try parseIdentifier()
-        expect(next: .terminal(.openingCurlyBraces))
+        try expect(next: .terminal(.openingCurlyBraces))
         let namespaceMembers = try parseNamespaceMembers()
-        expect(next: .terminal(.closingCurlyBraces))
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.closingCurlyBraces))
+        try expect(next: .terminal(.semicolon))
 
         return Namespace(identifier: identifier, extendedAttributeList: extendedAttributeList, namespaceMembers: namespaceMembers)
     }
@@ -1466,7 +1489,7 @@ public class Parser {
          Partial ::
          partial PartialDefinition
          */
-        expect(next: .terminal(.partial))
+        try expect(next: .terminal(.partial))
 
         return try parsePartialDefinition(extendedAttributeList: extendedAttributeList)
     }
@@ -1481,7 +1504,7 @@ public class Parser {
         */
         switch try unwrap(tokens.first) {
         case .terminal(.interface):
-            expect(next: .terminal(.interface))
+            try expect(next: .terminal(.interface))
             return try parsePartialInterfaceOrPartialMixin(extendedAttributeList: extendedAttributeList)
 
         case let t where firstSet(for: .PartialDictionary).contains(t):
@@ -1526,10 +1549,10 @@ public class Parser {
          */
 
         let identifier = try parseIdentifier()
-        expect(next: .terminal(.openingCurlyBraces))
+        try expect(next: .terminal(.openingCurlyBraces))
         let partialInterfaceMembers = try parsePartialInterfaceMembers()
-        expect(next: .terminal(.closingCurlyBraces))
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.closingCurlyBraces))
+        try expect(next: .terminal(.semicolon))
 
         return .interface(Interface(identifier: identifier, extendedAttributeList: [], inheritance: nil, members: partialInterfaceMembers), extendedAttributeList)
     }
@@ -1540,12 +1563,12 @@ public class Parser {
          PartialDictionary ::
          dictionary identifier { DictionaryMembers } ;
          */
-        expect(next: .terminal(.dictionary))
+        try expect(next: .terminal(.dictionary))
         let identifier = try parseIdentifier()
-        expect(next: .terminal(.openingCurlyBraces))
+        try expect(next: .terminal(.openingCurlyBraces))
         let dictionaryMembers = try parseDictionaryMembers()
-        expect(next: .terminal(.closingCurlyBraces))
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.closingCurlyBraces))
+        try expect(next: .terminal(.semicolon))
 
         return Dictionary(identifier: identifier, extendedAttributeList: [], inheritance: nil, members: dictionaryMembers)
     }
@@ -1557,13 +1580,13 @@ public class Parser {
          dictionary identifier Inheritance { DictionaryMembers } ;
          */
 
-        expect(next: .terminal(.dictionary))
+        try expect(next: .terminal(.dictionary))
         let identifier = try parseIdentifier()
         let inheritance = try parseInheritance()
-        expect(next: .terminal(.openingCurlyBraces))
+        try expect(next: .terminal(.openingCurlyBraces))
         let dictionaryMembers = try parseDictionaryMembers()
-        expect(next: .terminal(.closingCurlyBraces))
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.closingCurlyBraces))
+        try expect(next: .terminal(.semicolon))
 
         return Dictionary(identifier: identifier, extendedAttributeList: extendedAttributeList, inheritance: inheritance, members: dictionaryMembers)
     }
@@ -1590,14 +1613,14 @@ public class Parser {
             tokens.removeFirst()
             let typeWithExtendedAttributes = try parseTypeWithExtendedAttributes()
             let identifier = try parseIdentifier()
-            expect(next: .terminal(.semicolon))
+            try expect(next: .terminal(.semicolon))
             return DictionaryMember(identifier: identifier, isRequired: true, extendedAttributeList: extendedAttributeList, dataType: typeWithExtendedAttributes.dataType, extendedAttributesOfDataType: typeWithExtendedAttributes.extendedAttributeList, defaultValue: nil)
 
         case let t where firstSet(for: .Type).contains(t):
             let dataType = try parseType()
             let identifier = try parseIdentifier()
             let defaultValue = try parseDefault()
-            expect(next: .terminal(.semicolon))
+            try expect(next: .terminal(.semicolon))
             return DictionaryMember(identifier: identifier, isRequired: false, extendedAttributeList: extendedAttributeList, dataType: dataType, extendedAttributesOfDataType: nil, defaultValue: defaultValue)
 
         case let t:
@@ -1611,12 +1634,12 @@ public class Parser {
         Enum ::
         enum identifier { EnumValueList } ;
          */
-        expect(next: .terminal(.enum))
+        try expect(next: .terminal(.enum))
         let identifier = try parseIdentifier()
-        expect(next: .terminal(.openingCurlyBraces))
+        try expect(next: .terminal(.openingCurlyBraces))
         let enumValueList = try parseEnumValueList()
-        expect(next: .terminal(.closingCurlyBraces))
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.closingCurlyBraces))
+        try expect(next: .terminal(.semicolon))
 
         return Enum(identifier: identifier, extendedAttributeList: extendedAttributeList, enumValues: enumValueList)
     }
@@ -1627,7 +1650,7 @@ public class Parser {
          EnumValueList ::
          string EnumValueListComma
          */
-        expect(next: .string)
+        try expect(next: .string)
         let string = strings.removeFirst()
 
         return try [EnumValue(string: string)] + parseEnumValueListComma()
@@ -1667,10 +1690,10 @@ public class Parser {
          typedef TypeWithExtendedAttributes identifier ;
          */
 
-        expect(next: .terminal(.typedef))
+        try expect(next: .terminal(.typedef))
         let typeWithExtendedAttributes = try parseTypeWithExtendedAttributes()
         let identifier = try parseIdentifier()
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.semicolon))
 
         return Typedef(identifier: identifier, dataType: typeWithExtendedAttributes.dataType, extendedAttributeList: typeWithExtendedAttributes.extendedAttributeList)
     }
@@ -1741,12 +1764,12 @@ public class Parser {
          ( UnionMemberType or UnionMemberType UnionMemberTypes )
          */
 
-        expect(next: .terminal(.openingParenthesis))
+        try expect(next: .terminal(.openingParenthesis))
         let unionMemberType0 = try parseUnionMemberType()
-        expect(next: .terminal(.or))
+        try expect(next: .terminal(.or))
         let unionMemberType1 = try parseUnionMemberType()
         let unionMemberTypes = try parseUnionMemberTypes()
-        expect(next: .terminal(.closingParenthesis))
+        try expect(next: .terminal(.closingParenthesis))
         return [unionMemberType0, unionMemberType1] + unionMemberTypes
     }
 
@@ -1796,9 +1819,9 @@ public class Parser {
          */
 
         let child = try parseIdentifier()
-        expect(next: .terminal(.includes))
+        try expect(next: .terminal(.includes))
         let parent = try parseIdentifier()
-        expect(next: .terminal(.semicolon))
+        try expect(next: .terminal(.semicolon))
 
         return IncludesStatement(child: child, parent: parent, extendedAttributeList: extendedAttributeList)
     }
@@ -1836,9 +1859,9 @@ public class Parser {
 
         case .terminal(.sequence):
             tokens.removeFirst()
-            expect(next: .terminal(.openingAngleBracket))
+            try expect(next: .terminal(.openingAngleBracket))
             let typeWithExtendedAttribute = try parseTypeWithExtendedAttributes()
-            expect(next: .terminal(.closingAngleBracket))
+            try expect(next: .terminal(.closingAngleBracket))
 
             let nullable = try parseNull()
             return.sequence(typeWithExtendedAttribute, nullable)
@@ -1860,9 +1883,9 @@ public class Parser {
 
         case .terminal(.FrozenArray):
             tokens.removeFirst()
-            expect(next: .terminal(.openingAngleBracket))
+            try expect(next: .terminal(.openingAngleBracket))
             let typeWithExtendedAttribute = try parseTypeWithExtendedAttributes()
-            expect(next: .terminal(.closingAngleBracket))
+            try expect(next: .terminal(.closingAngleBracket))
             let nullable = try parseNull()
             return .frozenArray(typeWithExtendedAttribute, nullable)
 
@@ -2024,10 +2047,10 @@ public class Parser {
          Promise < ReturnType >
          */
 
-        expect(next: .terminal(.promise))
-        expect(next: .terminal(.openingAngleBracket))
+        try expect(next: .terminal(.promise))
+        try expect(next: .terminal(.openingAngleBracket))
         let returnType = try parseReturnType()
-        expect(next: .terminal(.closingAngleBracket))
+        try expect(next: .terminal(.closingAngleBracket))
 
         return Promise(returnType: returnType)
     }
@@ -2051,12 +2074,12 @@ public class Parser {
          record < StringType , TypeWithExtendedAttributes >
          */
 
-        expect(next: .terminal(.record))
-        expect(next: .terminal(.openingAngleBracket))
+        try expect(next: .terminal(.record))
+        try expect(next: .terminal(.openingAngleBracket))
         let stringType = try parseStringType()
-        expect(next: .terminal(.comma))
+        try expect(next: .terminal(.comma))
         let typeWithExtendedAttributes = try parseTypeWithExtendedAttributes()
-        expect(next: .terminal(.closingAngleBracket))
+        try expect(next: .terminal(.closingAngleBracket))
 
         return RecordType(stringType: stringType, typeWithExtendedAttributes: typeWithExtendedAttributes)
     }
@@ -2107,6 +2130,8 @@ public class Parser {
     }
 }
 
+// MARK: - First set
+
 func union(_ sets: Set<Token> ...) -> Set<Token> {
 
     return sets.reduce(Set<Token>()) {
@@ -2114,539 +2139,539 @@ func union(_ sets: Set<Token> ...) -> Set<Token> {
     }
 }
 
-    func firstSet(for symbol: NonTerminal) -> Set<Token> {
-
-        switch symbol {
-        case .Definitions:
-            return union(
-                firstSet(for: .ExtendedAttributes),
-                firstSet(for: .Definition)
-            )
-
-        case .Definition:
-            return union(
-                firstSet(for: .CallbackOrInterfaceOrMixin),
-                firstSet(for: .Namespace),
-                firstSet(for: .Partial),
-                firstSet(for: .Dictionary),
-                firstSet(for: .Enum),
-                firstSet(for: .Typedef),
-                firstSet(for: .IncludesStatement)
-            )
-
-        case .ArgumentNameKeyword:
-            return [.terminal(.async),.terminal(.attribute),.terminal(.callback),.terminal(.const),.terminal(.constructor),.terminal(.deleter),.terminal(.dictionary),.terminal(.enum),.terminal(.getter),.terminal(.includes),.terminal(.inherit),.terminal(.interface),.terminal(.iterable),.terminal(.maplike),.terminal(.mixin),.terminal(.namespace),.terminal(.partial),.terminal(.readonly),.terminal(.required),.terminal(.setlike),.terminal(.setter),.terminal(.static),.terminal(.stringifier),.terminal(.typedef),.terminal(.unrestricted),]
-
-        case .CallbackOrInterfaceOrMixin:
-            return [.terminal(.callback), .terminal(.interface)]
-
-        case .InterfaceOrMixin:
-            return union(
-                firstSet(for: .InterfaceRest),
-                firstSet(for: .MixinRest)
-            )
-
-        case .Partial:
-            return [.terminal(.partial)]
-
-        case .PartialDefinition:
-            return union(
-                [.terminal(.interface)],
-                firstSet(for: .PartialDictionary),
-                firstSet(for: .Namespace)
-            )
-
-        case .PartialInterfaceOrPartialMixin:
-            return union(
-                firstSet(for: .PartialInterfaceRest),
-                firstSet(for: .MixinRest)
-            )
-
-        case .PartialInterfaceRest:
-            return [.identifier]
-
-        case .InterfaceMembers:
-            return union(
-                firstSet(for: .ExtendedAttributeList),
-                firstSet(for: .InterfaceMember)
-            )
-
-        case .InterfaceMember:
-            return union(
-                firstSet(for: .PartialInterfaceMember),
-                firstSet(for: .Constructor)
-            )
-
-        case .PartialInterfaceMembers:
-            return union(
-                firstSet(for: .ExtendedAttributeList),
-                firstSet(for: .PartialInterfaceMember)
-            )
-
-        case .PartialInterfaceMember:
-            return union(
-                firstSet(for: .Const),
-                firstSet(for: .Operation),
-                firstSet(for: .Stringifier),
-                firstSet(for: .StaticMember),
-                firstSet(for: .Iterable),
-                firstSet(for: .AsyncIterable),
-                firstSet(for: .ReadOnlyMember),
-                firstSet(for: .ReadWriteAttribute),
-                firstSet(for: .ReadWriteMaplike),
-                firstSet(for: .ReadWriteSetlike)
-            )
-
-        case .Inheritance:
-            return [.terminal(.colon)]
-
-        case .InterfaceRest:
-            return [.identifier]
-
-        case .MixinRest:
-            return [.terminal(.mixin)]
-
-        case .MixinMembers:
-            return union(
-                firstSet(for: .ExtendedAttributeList),
-                firstSet(for: .MixinMember)
-            )
-
-        case .MixinMember:
-            return union(
-                firstSet(for: .Const),
-                firstSet(for: .RegularOperation),
-                firstSet(for: .Stringifier),
-                firstSet(for: .ReadOnly),
-                firstSet(for: .AttributeRest)
-            )
-
-        case .IncludesStatement:
-            return [.identifier]
-
-        case .CallbackRestOrInterface:
-            return union(
-                firstSet(for: .CallbackRest),
-                [.identifier]
-            )
-
-        case .CallbackInterfaceMembers:
-            return union(
-                firstSet(for: .ExtendedAttributeList),
-                firstSet(for: .CallbackInterfaceMember)
-            )
-
-        case .CallbackInterfaceMember:
-            return union(
-                firstSet(for: .Const),
-                firstSet(for: .RegularOperation)
-            )
-
-        case .Const:
-            return [.terminal(.const)]
-
-        case .ConstValue:
-            return union(
-                firstSet(for: .BooleanLiteral),
-                firstSet(for: .FloatLiteral),
-                [.integer]
-            )
-
-        case .BooleanLiteral:
-            return [.terminal(.true), .terminal(.false)]
-
-        case .FloatLiteral:
-            return [.decimal, .terminal(.negativeInfinity), .terminal(.infinity), .terminal(.nan)]
-
-        case .ConstType:
-            return union(
-                firstSet(for: .PrimitiveType),
-                [.identifier]
-            )
-
-        case .ReadOnlyMember:
-            return [.terminal(.readonly)]
-
-        case .ReadOnlyMemberRest:
-            return union(
-                firstSet(for: .AttributeRest),
-                firstSet(for: .MaplikeRest),
-                firstSet(for: .SetlikeRest)
-            )
-
-        case .ReadWriteAttribute:
-            return union(
-                [.terminal(.inherit)],
-                firstSet(for: .AttributeRest)
-            )
-
-        case .AttributeRest:
-            return [.terminal(.attribute)]
-
-        case .AttributeName:
-            return union(
-                firstSet(for: .AttributeNameKeyword),
-                [.identifier]
-            )
-
-        case .AttributeNameKeyword:
-            return [.terminal(.async), .terminal(.required)]
-
-        case .ReadOnly:
-            return [.terminal(.readonly)]
-
-        case .DefaultValue:
-            return union(
-                firstSet(for: .ConstValue),
-                [.string, .terminal(.openingSquareBracket), .terminal(.openingCurlyBraces), .terminal(.null)]
-            )
-
-        case .Operation:
-            return union(
-                firstSet(for: .RegularOperation),
-                firstSet(for: .SpecialOperation)
-            )
-
-        case .RegularOperation:
-            return firstSet(for: .ReturnType)
-
-        case .SpecialOperation:
-            return firstSet(for: .Special)
-
-        case .Special:
-            return [.terminal(.getter), .terminal(.setter), .terminal(.deleter)]
-
-        case .OperationRest:
-            return union(
-                firstSet(for: .OptionalOperationName),
-                [.terminal(.openingParenthesis)]
-            )
-
-        case .OptionalOperationName:
-            return firstSet(for: .OperationName)
-
-        case .OperationName:
-            return union(
-                firstSet(for: .OperationNameKeyword),
-                [.identifier]
-            )
-
-        case .OperationNameKeyword:
-            return [.terminal(.includes)]
-
-        case .ArgumentList:
-            return firstSet(for: .Argument)
-
-        case .Arguments:
-            return [.terminal(.comma)]
-
-        case .Argument:
-            return union(
-                firstSet(for: .ExtendedAttributeList),
-                firstSet(for: .ArgumentRest)
-            )
-
-        case .ArgumentRest:
-            return union(
-                [.terminal(.optional)],
-                firstSet(for: .Type)
-            )
-
-        case .ArgumentName:
-            return union(
-                firstSet(for: .ArgumentNameKeyword),
-                [.identifier]
-            )
-
-        case .Ellipsis:
-            return [.terminal(.ellipsis)]
-
-        case .ReturnType:
-            return union(
-                firstSet(for: .Type),
-                [.terminal(.void)]
-            )
-
-        case .Constructor:
-            return [.terminal(.constructor)]
-
-        case .Stringifier:
-            return [.terminal(.stringifier)]
-
-        case .StringifierRest:
-            return union(
-                firstSet(for: .ReadOnly),
-                firstSet(for: .AttributeRest),
-                firstSet(for: .RegularOperation),
-                [.terminal(.semicolon)]
-            )
-
-        case .StaticMember:
-            return [.terminal(.static)]
-
-        case .StaticMemberRest:
-            return union(
-                firstSet(for: .ReadOnly),
-                firstSet(for: .AttributeRest),
-                firstSet(for: .RegularOperation)
-            )
-
-        case .Iterable:
-            return [.terminal(.iterable)]
-
-        case .OptionalType:
-            return [.terminal(.comma)]
-
-        case .AsyncIterable:
-            return [.terminal(.async)]
-
-        case .ReadWriteMaplike:
-            return firstSet(for: .MaplikeRest)
-
-        case .MaplikeRest:
-            return [.terminal(.maplike)]
-
-        case .ReadWriteSetlike:
-            return firstSet(for: .SetlikeRest)
-
-        case .SetlikeRest:
-            return [.terminal(.setlike)]
-
-        case .Namespace:
-            return [.terminal(.namespace)]
-
-        case .NamespaceMembers:
-            return union(
-                firstSet(for: .ExtendedAttributeList),
-                firstSet(for: .NamespaceMember)
-            )
-
-        case .NamespaceMember:
-            return union(
-                firstSet(for: .RegularOperation),
-                [.terminal(.readonly)]
-            )
-
-        case .Dictionary:
-            return [.terminal(.dictionary)]
-
-        case .DictionaryMembers:
-            return firstSet(for: .DictionaryMember)
-
-        case .DictionaryMember:
-            return union(
-                firstSet(for: .ExtendedAttributeList),
-                firstSet(for: .DictionaryMemberRest)
-            )
-
-        case .DictionaryMemberRest:
-            return union(
-                [.terminal(.required)],
-                firstSet(for: .Type)
-            )
-
-        case .PartialDictionary:
-            return [.terminal(.dictionary)]
-
-        case .Default:
-            return [.terminal(.equalSign)]
-
-        case .Enum:
-            return [.terminal(.enum)]
-
-        case .EnumValueList:
-            return [.string]
-
-        case .EnumValueListComma:
-            return [.terminal(.comma)]
-
-        case .EnumValueListString:
-            return [.string]
-
-        case .CallbackRest:
-            return [.identifier]
-
-        case .Typedef:
-            return [.terminal(.typedef)]
-
-        case .Type:
-            return union(
-                firstSet(for: .SingleType),
-                firstSet(for: .UnionType)
-            )
-
-        case .TypeWithExtendedAttributes:
-            return union(
-                firstSet(for: .ExtendedAttributeList),
-                firstSet(for: .Type)
-            )
-
-        case .SingleType:
-            return union(
-                firstSet(for: .DistinguishableType),
-                [.terminal(.any)],
-                firstSet(for: .PromiseType)
-            )
-
-        case .UnionType:
-            return [.terminal(.openingParenthesis)]
-
-        case .UnionMemberType:
-            return union(
-                firstSet(for: .ExtendedAttributeList),
-                firstSet(for: .DistinguishableType),
-                firstSet(for: .UnionType)
-            )
-
-        case .UnionMemberTypes:
-            return [.terminal(.or)]
-
-        case .DistinguishableType:
-            return union(
-                firstSet(for: .PrimitiveType),
-                firstSet(for: .StringType),
-                [.identifier, .terminal(.sequence), .terminal(.object), .terminal(.symbol)],
-                firstSet(for: .BufferRelatedType),
-                [.terminal(.FrozenArray)],
-                firstSet(for: .RecordType)
-            )
-
-        case .PrimitiveType:
-            return union(
-                firstSet(for: .UnsignedIntegerType),
-                firstSet(for: .UnrestrictedFloatType),
-                [.terminal(.boolean), .terminal(.byte),.terminal(.octet)]
-            )
-
-        case .UnrestrictedFloatType:
-            return union(
-                firstSet(for: .FloatType),
-                [.terminal(.unrestricted)]
-            )
-
-        case .UnsignedIntegerType:
-            return union(
-                firstSet(for: .IntegerType),
-                [.terminal(.unsigned)]
-            )
-
-        case .FloatType:
-            return [.terminal(.double),.terminal(.float),]
-
-        case .IntegerType:
-            return [.terminal(.long),.terminal(.short),]
-
-        case .OptionalLong:
-            return [.terminal(.long)]
-
-        case .StringType:
-            return [.terminal(.ByteString), .terminal(.DOMString), .terminal(.USVString)]
-
-        case .PromiseType:
-            return [.terminal(.promise)]
-
-        case .RecordType:
-            return [.terminal(.record)]
-
-        case .Null:
-            return [.terminal(.questionMark)]
-
-        case .BufferRelatedType:
-            return [.terminal(.ArrayBuffer),.terminal(.DataView),.terminal(.Int8Array),.terminal(.Int16Array),.terminal(.Int32Array),.terminal(.Uint8Array),.terminal(.Uint16Array),.terminal(.Uint32Array),.terminal(.Uint8ClampedArray),.terminal(.Float32Array),.terminal(.Float64Array),]
-
-        case .ExtendedAttributeList :
-            return [.terminal(.openingSquareBracket)]
-
-        case .ExtendedAttributes:
-            return [.terminal(.comma)]
-
-        case .ExtendedAttribute:
-            return union(
-                [.terminal(.openingParenthesis), .terminal(.openingSquareBracket), .terminal(.openingCurlyBraces)],
-                firstSet(for: .Other)
-            )
-
-        case .ExtendedAttributeRest:
-            return firstSet(for: .ExtendedAttribute)
-
-        case .ExtendedAttributeInner:
-            return union(
-                [.terminal(.openingParenthesis), .terminal(.openingSquareBracket), .terminal(.openingCurlyBraces)],
-                firstSet(for: .OtherOrComma)
-            )
-
-        case .Other:
-            return union(
-                [.identifier,
-                 .integer,
-                 .decimal,
-                 .string,
-                 .other,
-                 .terminal(.minus),
-                 .terminal(.negativeInfinity),
-                 .terminal(.dot),
-                 .terminal(.ellipsis),
-                 .terminal(.colon),
-                 .terminal(.semicolon),
-                 .terminal(.openingAngleBracket),
-                 .terminal(.equalSign),
-                 .terminal(.closingAngleBracket),
-                 .terminal(.questionMark),
-                 .terminal(.ByteString),
-                 .terminal(.DOMString),
-                 .terminal(.FrozenArray),
-                 .terminal(.infinity),
-                 .terminal(.nan),
-                 .terminal(.promise),
-                 .terminal(.USVString),
-                 .terminal(.any),
-                 .terminal(.boolean),
-                 .terminal(.byte),
-                 .terminal(.double),
-                 .terminal(.false),
-                 .terminal(.float),
-                 .terminal(.long),
-                 .terminal(.null),
-                 .terminal(.object),
-                 .terminal(.octet),
-                 .terminal(.or),
-                 .terminal(.optional),
-                 .terminal(.record),
-                 .terminal(.sequence),
-                 .terminal(.short),
-                 .terminal(.symbol),
-                 .terminal(.true),
-                 .terminal(.unsigned),
-                 .terminal(.void)],
-                firstSet(for: .ArgumentNameKeyword),
-                firstSet(for: .BufferRelatedType)
-            )
-
-        case .OtherOrComma:
-            return union(
-                [.terminal(.comma)],
-                firstSet(for: .Other)
-            )
-
-        case .IdentifierList:
-            return [.identifier]
-
-        case .Identifiers:
-            return [.terminal(.comma)]
-            
-        case .ExtendedAttributeNoArgs:
-            return []
-
-        case .ExtendedAttributeArgList:
-            return []
-
-        case .ExtendedAttributeIdent:
-            return []
-
-        case .ExtendedAttributeIdentList:
-            return []
-
-        case .ExtendedAttributeNamedArgList:
-            return []
-        }
+func firstSet(for symbol: NonTerminal) -> Set<Token> {
+
+    switch symbol {
+    case .Definitions:
+        return union(
+            firstSet(for: .ExtendedAttributes),
+            firstSet(for: .Definition)
+        )
+
+    case .Definition:
+        return union(
+            firstSet(for: .CallbackOrInterfaceOrMixin),
+            firstSet(for: .Namespace),
+            firstSet(for: .Partial),
+            firstSet(for: .Dictionary),
+            firstSet(for: .Enum),
+            firstSet(for: .Typedef),
+            firstSet(for: .IncludesStatement)
+        )
+
+    case .ArgumentNameKeyword:
+        return [.terminal(.async),.terminal(.attribute),.terminal(.callback),.terminal(.const),.terminal(.constructor),.terminal(.deleter),.terminal(.dictionary),.terminal(.enum),.terminal(.getter),.terminal(.includes),.terminal(.inherit),.terminal(.interface),.terminal(.iterable),.terminal(.maplike),.terminal(.mixin),.terminal(.namespace),.terminal(.partial),.terminal(.readonly),.terminal(.required),.terminal(.setlike),.terminal(.setter),.terminal(.static),.terminal(.stringifier),.terminal(.typedef),.terminal(.unrestricted),]
+
+    case .CallbackOrInterfaceOrMixin:
+        return [.terminal(.callback), .terminal(.interface)]
+
+    case .InterfaceOrMixin:
+        return union(
+            firstSet(for: .InterfaceRest),
+            firstSet(for: .MixinRest)
+        )
+
+    case .Partial:
+        return [.terminal(.partial)]
+
+    case .PartialDefinition:
+        return union(
+            [.terminal(.interface)],
+            firstSet(for: .PartialDictionary),
+            firstSet(for: .Namespace)
+        )
+
+    case .PartialInterfaceOrPartialMixin:
+        return union(
+            firstSet(for: .PartialInterfaceRest),
+            firstSet(for: .MixinRest)
+        )
+
+    case .PartialInterfaceRest:
+        return [.identifier]
+
+    case .InterfaceMembers:
+        return union(
+            firstSet(for: .ExtendedAttributeList),
+            firstSet(for: .InterfaceMember)
+        )
+
+    case .InterfaceMember:
+        return union(
+            firstSet(for: .PartialInterfaceMember),
+            firstSet(for: .Constructor)
+        )
+
+    case .PartialInterfaceMembers:
+        return union(
+            firstSet(for: .ExtendedAttributeList),
+            firstSet(for: .PartialInterfaceMember)
+        )
+
+    case .PartialInterfaceMember:
+        return union(
+            firstSet(for: .Const),
+            firstSet(for: .Operation),
+            firstSet(for: .Stringifier),
+            firstSet(for: .StaticMember),
+            firstSet(for: .Iterable),
+            firstSet(for: .AsyncIterable),
+            firstSet(for: .ReadOnlyMember),
+            firstSet(for: .ReadWriteAttribute),
+            firstSet(for: .ReadWriteMaplike),
+            firstSet(for: .ReadWriteSetlike)
+        )
+
+    case .Inheritance:
+        return [.terminal(.colon)]
+
+    case .InterfaceRest:
+        return [.identifier]
+
+    case .MixinRest:
+        return [.terminal(.mixin)]
+
+    case .MixinMembers:
+        return union(
+            firstSet(for: .ExtendedAttributeList),
+            firstSet(for: .MixinMember)
+        )
+
+    case .MixinMember:
+        return union(
+            firstSet(for: .Const),
+            firstSet(for: .RegularOperation),
+            firstSet(for: .Stringifier),
+            firstSet(for: .ReadOnly),
+            firstSet(for: .AttributeRest)
+        )
+
+    case .IncludesStatement:
+        return [.identifier]
+
+    case .CallbackRestOrInterface:
+        return union(
+            firstSet(for: .CallbackRest),
+            [.identifier]
+        )
+
+    case .CallbackInterfaceMembers:
+        return union(
+            firstSet(for: .ExtendedAttributeList),
+            firstSet(for: .CallbackInterfaceMember)
+        )
+
+    case .CallbackInterfaceMember:
+        return union(
+            firstSet(for: .Const),
+            firstSet(for: .RegularOperation)
+        )
+
+    case .Const:
+        return [.terminal(.const)]
+
+    case .ConstValue:
+        return union(
+            firstSet(for: .BooleanLiteral),
+            firstSet(for: .FloatLiteral),
+            [.integer]
+        )
+
+    case .BooleanLiteral:
+        return [.terminal(.true), .terminal(.false)]
+
+    case .FloatLiteral:
+        return [.decimal, .terminal(.negativeInfinity), .terminal(.infinity), .terminal(.nan)]
+
+    case .ConstType:
+        return union(
+            firstSet(for: .PrimitiveType),
+            [.identifier]
+        )
+
+    case .ReadOnlyMember:
+        return [.terminal(.readonly)]
+
+    case .ReadOnlyMemberRest:
+        return union(
+            firstSet(for: .AttributeRest),
+            firstSet(for: .MaplikeRest),
+            firstSet(for: .SetlikeRest)
+        )
+
+    case .ReadWriteAttribute:
+        return union(
+            [.terminal(.inherit)],
+            firstSet(for: .AttributeRest)
+        )
+
+    case .AttributeRest:
+        return [.terminal(.attribute)]
+
+    case .AttributeName:
+        return union(
+            firstSet(for: .AttributeNameKeyword),
+            [.identifier]
+        )
+
+    case .AttributeNameKeyword:
+        return [.terminal(.async), .terminal(.required)]
+
+    case .ReadOnly:
+        return [.terminal(.readonly)]
+
+    case .DefaultValue:
+        return union(
+            firstSet(for: .ConstValue),
+            [.string, .terminal(.openingSquareBracket), .terminal(.openingCurlyBraces), .terminal(.null)]
+        )
+
+    case .Operation:
+        return union(
+            firstSet(for: .RegularOperation),
+            firstSet(for: .SpecialOperation)
+        )
+
+    case .RegularOperation:
+        return firstSet(for: .ReturnType)
+
+    case .SpecialOperation:
+        return firstSet(for: .Special)
+
+    case .Special:
+        return [.terminal(.getter), .terminal(.setter), .terminal(.deleter)]
+
+    case .OperationRest:
+        return union(
+            firstSet(for: .OptionalOperationName),
+            [.terminal(.openingParenthesis)]
+        )
+
+    case .OptionalOperationName:
+        return firstSet(for: .OperationName)
+
+    case .OperationName:
+        return union(
+            firstSet(for: .OperationNameKeyword),
+            [.identifier]
+        )
+
+    case .OperationNameKeyword:
+        return [.terminal(.includes)]
+
+    case .ArgumentList:
+        return firstSet(for: .Argument)
+
+    case .Arguments:
+        return [.terminal(.comma)]
+
+    case .Argument:
+        return union(
+            firstSet(for: .ExtendedAttributeList),
+            firstSet(for: .ArgumentRest)
+        )
+
+    case .ArgumentRest:
+        return union(
+            [.terminal(.optional)],
+            firstSet(for: .Type)
+        )
+
+    case .ArgumentName:
+        return union(
+            firstSet(for: .ArgumentNameKeyword),
+            [.identifier]
+        )
+
+    case .Ellipsis:
+        return [.terminal(.ellipsis)]
+
+    case .ReturnType:
+        return union(
+            firstSet(for: .Type),
+            [.terminal(.void)]
+        )
+
+    case .Constructor:
+        return [.terminal(.constructor)]
+
+    case .Stringifier:
+        return [.terminal(.stringifier)]
+
+    case .StringifierRest:
+        return union(
+            firstSet(for: .ReadOnly),
+            firstSet(for: .AttributeRest),
+            firstSet(for: .RegularOperation),
+            [.terminal(.semicolon)]
+        )
+
+    case .StaticMember:
+        return [.terminal(.static)]
+
+    case .StaticMemberRest:
+        return union(
+            firstSet(for: .ReadOnly),
+            firstSet(for: .AttributeRest),
+            firstSet(for: .RegularOperation)
+        )
+
+    case .Iterable:
+        return [.terminal(.iterable)]
+
+    case .OptionalType:
+        return [.terminal(.comma)]
+
+    case .AsyncIterable:
+        return [.terminal(.async)]
+
+    case .ReadWriteMaplike:
+        return firstSet(for: .MaplikeRest)
+
+    case .MaplikeRest:
+        return [.terminal(.maplike)]
+
+    case .ReadWriteSetlike:
+        return firstSet(for: .SetlikeRest)
+
+    case .SetlikeRest:
+        return [.terminal(.setlike)]
+
+    case .Namespace:
+        return [.terminal(.namespace)]
+
+    case .NamespaceMembers:
+        return union(
+            firstSet(for: .ExtendedAttributeList),
+            firstSet(for: .NamespaceMember)
+        )
+
+    case .NamespaceMember:
+        return union(
+            firstSet(for: .RegularOperation),
+            [.terminal(.readonly)]
+        )
+
+    case .Dictionary:
+        return [.terminal(.dictionary)]
+
+    case .DictionaryMembers:
+        return firstSet(for: .DictionaryMember)
+
+    case .DictionaryMember:
+        return union(
+            firstSet(for: .ExtendedAttributeList),
+            firstSet(for: .DictionaryMemberRest)
+        )
+
+    case .DictionaryMemberRest:
+        return union(
+            [.terminal(.required)],
+            firstSet(for: .Type)
+        )
+
+    case .PartialDictionary:
+        return [.terminal(.dictionary)]
+
+    case .Default:
+        return [.terminal(.equalSign)]
+
+    case .Enum:
+        return [.terminal(.enum)]
+
+    case .EnumValueList:
+        return [.string]
+
+    case .EnumValueListComma:
+        return [.terminal(.comma)]
+
+    case .EnumValueListString:
+        return [.string]
+
+    case .CallbackRest:
+        return [.identifier]
+
+    case .Typedef:
+        return [.terminal(.typedef)]
+
+    case .Type:
+        return union(
+            firstSet(for: .SingleType),
+            firstSet(for: .UnionType)
+        )
+
+    case .TypeWithExtendedAttributes:
+        return union(
+            firstSet(for: .ExtendedAttributeList),
+            firstSet(for: .Type)
+        )
+
+    case .SingleType:
+        return union(
+            firstSet(for: .DistinguishableType),
+            [.terminal(.any)],
+            firstSet(for: .PromiseType)
+        )
+
+    case .UnionType:
+        return [.terminal(.openingParenthesis)]
+
+    case .UnionMemberType:
+        return union(
+            firstSet(for: .ExtendedAttributeList),
+            firstSet(for: .DistinguishableType),
+            firstSet(for: .UnionType)
+        )
+
+    case .UnionMemberTypes:
+        return [.terminal(.or)]
+
+    case .DistinguishableType:
+        return union(
+            firstSet(for: .PrimitiveType),
+            firstSet(for: .StringType),
+            [.identifier, .terminal(.sequence), .terminal(.object), .terminal(.symbol)],
+            firstSet(for: .BufferRelatedType),
+            [.terminal(.FrozenArray)],
+            firstSet(for: .RecordType)
+        )
+
+    case .PrimitiveType:
+        return union(
+            firstSet(for: .UnsignedIntegerType),
+            firstSet(for: .UnrestrictedFloatType),
+            [.terminal(.boolean), .terminal(.byte),.terminal(.octet)]
+        )
+
+    case .UnrestrictedFloatType:
+        return union(
+            firstSet(for: .FloatType),
+            [.terminal(.unrestricted)]
+        )
+
+    case .UnsignedIntegerType:
+        return union(
+            firstSet(for: .IntegerType),
+            [.terminal(.unsigned)]
+        )
+
+    case .FloatType:
+        return [.terminal(.double),.terminal(.float),]
+
+    case .IntegerType:
+        return [.terminal(.long),.terminal(.short),]
+
+    case .OptionalLong:
+        return [.terminal(.long)]
+
+    case .StringType:
+        return [.terminal(.ByteString), .terminal(.DOMString), .terminal(.USVString)]
+
+    case .PromiseType:
+        return [.terminal(.promise)]
+
+    case .RecordType:
+        return [.terminal(.record)]
+
+    case .Null:
+        return [.terminal(.questionMark)]
+
+    case .BufferRelatedType:
+        return [.terminal(.ArrayBuffer),.terminal(.DataView),.terminal(.Int8Array),.terminal(.Int16Array),.terminal(.Int32Array),.terminal(.Uint8Array),.terminal(.Uint16Array),.terminal(.Uint32Array),.terminal(.Uint8ClampedArray),.terminal(.Float32Array),.terminal(.Float64Array),]
+
+    case .ExtendedAttributeList :
+        return [.terminal(.openingSquareBracket)]
+
+    case .ExtendedAttributes:
+        return [.terminal(.comma)]
+
+    case .ExtendedAttribute:
+        return union(
+            [.terminal(.openingParenthesis), .terminal(.openingSquareBracket), .terminal(.openingCurlyBraces)],
+            firstSet(for: .Other)
+        )
+
+    case .ExtendedAttributeRest:
+        return firstSet(for: .ExtendedAttribute)
+
+    case .ExtendedAttributeInner:
+        return union(
+            [.terminal(.openingParenthesis), .terminal(.openingSquareBracket), .terminal(.openingCurlyBraces)],
+            firstSet(for: .OtherOrComma)
+        )
+
+    case .Other:
+        return union(
+            [.identifier,
+             .integer,
+             .decimal,
+             .string,
+             .other,
+             .terminal(.minus),
+             .terminal(.negativeInfinity),
+             .terminal(.dot),
+             .terminal(.ellipsis),
+             .terminal(.colon),
+             .terminal(.semicolon),
+             .terminal(.openingAngleBracket),
+             .terminal(.equalSign),
+             .terminal(.closingAngleBracket),
+             .terminal(.questionMark),
+             .terminal(.ByteString),
+             .terminal(.DOMString),
+             .terminal(.FrozenArray),
+             .terminal(.infinity),
+             .terminal(.nan),
+             .terminal(.promise),
+             .terminal(.USVString),
+             .terminal(.any),
+             .terminal(.boolean),
+             .terminal(.byte),
+             .terminal(.double),
+             .terminal(.false),
+             .terminal(.float),
+             .terminal(.long),
+             .terminal(.null),
+             .terminal(.object),
+             .terminal(.octet),
+             .terminal(.or),
+             .terminal(.optional),
+             .terminal(.record),
+             .terminal(.sequence),
+             .terminal(.short),
+             .terminal(.symbol),
+             .terminal(.true),
+             .terminal(.unsigned),
+             .terminal(.void)],
+            firstSet(for: .ArgumentNameKeyword),
+            firstSet(for: .BufferRelatedType)
+        )
+
+    case .OtherOrComma:
+        return union(
+            [.terminal(.comma)],
+            firstSet(for: .Other)
+        )
+
+    case .IdentifierList:
+        return [.identifier]
+
+    case .Identifiers:
+        return [.terminal(.comma)]
+
+    case .ExtendedAttributeNoArgs:
+        return []
+
+    case .ExtendedAttributeArgList:
+        return []
+
+    case .ExtendedAttributeIdent:
+        return []
+
+    case .ExtendedAttributeIdentList:
+        return []
+
+    case .ExtendedAttributeNamedArgList:
+        return []
     }
+}

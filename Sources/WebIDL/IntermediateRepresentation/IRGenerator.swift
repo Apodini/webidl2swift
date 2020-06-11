@@ -659,7 +659,7 @@ public class IRGenerator {
     func handleIterable(_ iterable: Iterable) -> MemberNode {
 
         switch (iterable.typeWithExtendedAttributes0.dataType, iterable.typeWithExtendedAttributes1?.dataType) {
-        case (let first, let second?):
+        case (_, let second?):
             return PairIterableNode(dataType: handleDataType(second))
 
         case (let first, nil):

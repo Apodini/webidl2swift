@@ -1,16 +1,9 @@
-//
-//  Tokenizer.swift
-//  WebIDLParser
-//
-//  Created by Manuel Burghard on 17.02.20.
-//  Copyright © 2020 Manuel Burghard. All rights reserved.
-//
+
 
 import Foundation
 
 public enum Token: Equatable, Hashable, CustomStringConvertible {
 
-case nonTerminal(NonTerminal)
     case terminal(Terminal)
 
     case integer                    //  =   /-?([1-9][0-9]*|0[Xx][0-9A-Fa-f]+|0[0-7]*)/
@@ -27,8 +20,6 @@ case nonTerminal(NonTerminal)
 
         case .terminal(let terminal):
             return ".terminal(\(terminal.description))"
-        case .nonTerminal(let nonTerminal):
-            return ".nonTerminal(\(nonTerminal.description))"
         case .integer:
             return ".integer"
         case .decimal:
@@ -104,7 +95,6 @@ public struct TokenisationResult: CustomStringConvertible {
             case .terminal(.openingCurlyBraces): stringValues.append("{\n")
             case .terminal(.semicolon): stringValues.append(";\n")
             case .terminal(let symbol): stringValues.append(symbol.rawValue)
-            case .nonTerminal(let symbol): stringValues.append(symbol.rawValue)
             case .identifier: stringValues.append(identifiers.removeFirst())
             case .integer: stringValues.append(String(integers.removeFirst()))
             case .decimal: stringValues.append(String(decimals.removeFirst()))
@@ -205,8 +195,6 @@ public struct Tokenizer {
         func appendIdentifier() {
             if let symbol = Terminal(rawValue: buffer) {
                 tokens.append(.terminal(symbol))
-            } else if let symbol = NonTerminal(rawValue: buffer) {
-                tokens.append(.nonTerminal(symbol))
             } else if identifierRegex.match(buffer) {
                 tokens.append(.identifier)
                 identifiers.append(buffer)
@@ -372,6 +360,11 @@ public struct Tokenizer {
                 state = .regular
                 appendIdentifier()
                 tokens.append(.terminal(.colon))
+
+            case (.identifier, "."):
+                appendIdentifier()
+                reset()
+                state = .startOfEllipsis
 
             case (.regular, ":"):
                 tokens.append(.terminal(.colon))

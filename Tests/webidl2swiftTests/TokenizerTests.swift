@@ -90,6 +90,10 @@ final class TokenizerTests: XCTestCase {
         XCTAssertEqual(result.tokens, [.identifier])
         XCTAssertEqual(result.identifiers, ["abc"])
 
+        result = try Tokenizer.tokenize("abc...")
+        XCTAssertEqual(result.tokens, [.identifier, .terminal(.ellipsis)])
+        XCTAssertEqual(result.identifiers, ["abc"])
+
         result = try Tokenizer.tokenize("ABC1\n")
         XCTAssertEqual(result.tokens, [.identifier])
         XCTAssertEqual(result.identifiers, ["ABC1"])
