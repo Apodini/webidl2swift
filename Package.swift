@@ -24,13 +24,13 @@ let package = Package(
             name: "webidl2swift",
             dependencies: [
                 .target(name: "Commands"),
-        ],
+            ],
             linkerSettings: [
-            .unsafeFlags([
-                // Fix for missing rpath for lib_InternalSwiftSyntaxParser.dylib when building from within Xcode.
-                // lib_InternalSwiftSyntaxParser.dylib is linked by SwiftSyntax.
-                "-Xlinker",  "-rpath", "-Xlinker", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/"
-            ])
+                .unsafeFlags([
+                    // Fix for missing rpath for lib_InternalSwiftSyntaxParser.dylib when building from within Xcode.
+                    // lib_InternalSwiftSyntaxParser.dylib is linked by SwiftSyntax.
+                    "-Xlinker", "-rpath", "-Xlinker", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/"
+                ])
             ]
         ),
         .target(
@@ -52,7 +52,7 @@ let package = Package(
                 .unsafeFlags([
                     // Fix for missing rpath for lib_InternalSwiftSyntaxParser.dylib when building from within Xcode.
                     // lib_InternalSwiftSyntaxParser.dylib is linked by SwiftSyntax.
-                    "-Xlinker",  "-rpath", "-Xlinker", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/"
+                    "-Xlinker", "-rpath", "-Xlinker", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/"
                 ])
             ]
         ),
@@ -65,7 +65,7 @@ let package = Package(
                 .unsafeFlags([
                     // Fix for missing rpath for lib_InternalSwiftSyntaxParser.dylib when building from within Xcode.
                     // lib_InternalSwiftSyntaxParser.dylib is linked by SwiftSyntax.
-                    "-Xlinker",  "-rpath", "-Xlinker", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/"
+                    "-Xlinker", "-rpath", "-Xlinker", "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/"
                 ])
             ]
         ),

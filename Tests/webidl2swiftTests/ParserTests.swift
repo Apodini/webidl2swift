@@ -5,6 +5,7 @@
 import XCTest
 @testable import WebIDL
 
+// swiftlint:disable force_cast
 final class ParserTests: XCTestCase {
 
     func test_parseExtendedAttributes() throws {
@@ -103,7 +104,8 @@ final class ParserTests: XCTestCase {
 
         XCTAssertEqual(definitions as! [Dictionary], [
             Dictionary(identifier: "A", extendedAttributeList: [], inheritance: nil, members: [
-                .init(identifier: "a", isRequired: true, extendedAttributeList: [], dataType: domStringType, extendedAttributesOfDataType: [], defaultValue: nil)]),
+                .init(identifier: "a", isRequired: true, extendedAttributeList: [], dataType: domStringType, extendedAttributesOfDataType: [], defaultValue: nil)
+            ]),
             Dictionary(identifier: "B", extendedAttributeList: [], inheritance: .init(identifier: "A"), members: [
                 .init(identifier: "b", isRequired: false, extendedAttributeList: [], dataType: longlongType, extendedAttributesOfDataType: nil, defaultValue: .constValue(.integer(42)))
             ]),
@@ -187,3 +189,4 @@ final class ParserTests: XCTestCase {
         ])
     }
 }
+// swiftlint:enable force_cast

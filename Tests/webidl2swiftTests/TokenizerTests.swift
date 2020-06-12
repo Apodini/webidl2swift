@@ -15,8 +15,8 @@ final class TokenizerTests: XCTestCase {
 
     func test_dot() throws {
 
-        XCTAssertEqual(try Tokenizer.tokenize(".").tokens, [.terminal(.dot),])
-        XCTAssertEqual(try Tokenizer.tokenize(" . ").tokens, [.terminal(.dot),])
+        XCTAssertEqual(try Tokenizer.tokenize(".").tokens, [.terminal(.dot)])
+        XCTAssertEqual(try Tokenizer.tokenize(" . ").tokens, [.terminal(.dot)])
     }
 
     func test_dotDot() throws {

@@ -7,9 +7,10 @@ import ArgumentParser
 import Commands
 @testable import webidl2swift
 
+// swiftlint:disable:next type_name
 final class webidl2swiftTests: XCTestCase {
 
-    func test_Generation() throws  {
+    func test_Generation() throws {
 
         let arguments = [
             "-o", "\(FileManager.default.temporaryDirectory.path)",
