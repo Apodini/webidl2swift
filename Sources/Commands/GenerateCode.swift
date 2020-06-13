@@ -10,26 +10,34 @@ import ArgumentParser
 import SwiftFormat
 import SwiftFormatConfiguration
 
+/// `GenerateCode` is invoked when webidl2swift is executed
 public struct GenerateCode: ParsableCommand {
 
+    /// The path to the directory containing Web IDL files.
     @Option(name: .shortAndLong, help: "The path to the directory containing Web IDL files.")
-    var inputDirectory: String
+    public var inputDirectory: String
 
+    /// The path to the output directory.
     @Option(name: .shortAndLong, help: "The path to the output directory.")
-    var ouputDirectory: String
+    public var ouputDirectory: String
 
+    /// Create a file for each definition.
     @Flag(name: .long, default: true, inversion: .prefixedNo, help: "Create a file for each definition.")
-    var createSeparateFiles: Bool
+    public var createSeparateFiles: Bool
 
-    @Flag(help: "Print verbose output")
-    var verbose: Bool
+    /// Print verbose output.
+    @Flag(help: "Print verbose output.")
+    public var verbose: Bool
 
+    /// Run swift-format over output.
     @Flag(name: .long, default: true, inversion: .prefixedNo, help: "Run swift-format over output.")
-    var prettyPrint: Bool
+    public var prettyPrint: Bool
 
+    /// Initialize a `GenerateCode` instance
     public init() {}
 
     // swiftlint:disable function_body_length
+    /// Execute the command
     public func run() throws {
 
         if verbose {
