@@ -13,8 +13,8 @@ jobs:
     - uses: actions/checkout@v2
       with:
         swift-version: "5.2.0"
-    - name: Xcode 11.4
-      run: sudo xcode-select -s /Applications/Xcode_11.4.app/Contents/Developer
+    - name: Xcode 11.5
+      run: sudo xcode-select -s /Applications/Xcode_11.5.app/Contents/Developer
     - name: Xcode version check
       run: xcodebuild -version
     - name: Check version
