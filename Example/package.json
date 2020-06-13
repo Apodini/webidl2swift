@@ -1,0 +1,22 @@
+{
+  "name": "webidl2swift-Example",
+  "version": "1.0.0",
+  "description": "",
+  "private": true,
+  "dependencies": {
+    "@wasmer/wasi": "^0.9.1",
+    "@wasmer/wasmfs": "^0.9.1",
+    "javascript-kit-swift": "file:./HelloWorld/.build/checkouts/JavaScriptKit/Runtime"
+  },
+  "devDependencies": {
+    "webpack": "^4.42.0",
+    "webpack-cli": "^3.3.11",
+    "webpack-dev-server": "^3.10.3"
+  },
+  "scripts": {
+    "build": "webpack",
+    "start": "webpack-dev-server"
+  },
+  "author": "Manuel Burghard",
+  "license": "MIT"
+}
