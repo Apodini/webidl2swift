@@ -110,7 +110,7 @@ public struct GenerateCode: ParsableCommand {
             ],
             dependencies: [
                 .package(name: "JavaScriptKit", url: "https://github.com/Unkaputtbar/JavaScriptKit.git", .branch("feature/webidl-support")),
-                .package(name: "ECMAScript", path: "../ECMAScript"),
+                .package(name: "ECMAScript", url: "https://github.com/Unkaputtbar/ECMAScript.git", .branch("develop")),
             ],
             targets: [
                 .target(name: "WebAPI", dependencies: ["JavaScriptKit", "ECMAScript"])
