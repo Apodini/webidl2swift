@@ -28,6 +28,8 @@ OPTIONS:
   -h, --help              Show help information.
 ```
 
+For an example setup, see [Example](https://github.com/Apodini/webidl2swift/tree/develop/Example)
+
 ## Contributing
 Contributions to this projects are welcome. Please make sure to read the [contribution guidelines](https://github.com/Apodini/.github/blob/master/CONTRIBUTING.md) first.
 
