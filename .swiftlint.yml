@@ -321,6 +321,7 @@ excluded: # paths to ignore during linting. Takes precedence over `included`.
   - .build
   - .swiftpm
   - R.generated.swift
+  - Example
 
 closure_body_length: # Closure bodies should not span too many lines.
   - 35 # warning - default: 20
