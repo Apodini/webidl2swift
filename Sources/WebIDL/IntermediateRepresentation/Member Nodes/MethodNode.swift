@@ -116,16 +116,16 @@ class MethodNode: MemberNode, Equatable {
 
                         let returnValue: String
                         if closureNode.returnType.identifier == "Void" {
-                            returnValue = "; return .undefined"
+                            returnValue = ""
                         } else {
-                            returnValue = ".fromJSValue()"
+                            returnValue = ".fromJSValue()!"
                         }
 
                         let argumentCount = closureNode.arguments.count
                         let closureArguments = (0 ..< argumentCount)
-                            .map { "$0[\($0)].fromJSValue()" }
+                            .map { "$0[\($0)].fromJSValue()!" }
                             .joined(separator: ", ")
-                        return "JSFunctionRef.from({ \($0.label)(\(closureArguments))\(returnValue) })"
+                        return "JSClosure { \($0.label)(\(closureArguments))\(returnValue) }"
                     } else {
                         return $0.label + ".jsValue()"
                     }
@@ -140,13 +140,13 @@ class MethodNode: MemberNode, Equatable {
                 } else if unwrapNode(returnType).isProtocol {
                     declaration += """
                      {
-                    return objectRef.\(name)!(\(passedParameters.joined(separator: ", "))).fromJSValue() as \(unwrapNode(returnType).typeErasedSwiftType)
+                    return objectRef.\(name)!(\(passedParameters.joined(separator: ", "))).fromJSValue()! as \(unwrapNode(returnType).typeErasedSwiftType)
                     }
                     """
                 } else {
                     declaration += """
                      {
-                        return objectRef.\(name)!(\(passedParameters.joined(separator: ", "))).fromJSValue()
+                        return objectRef.\(name)!(\(passedParameters.joined(separator: ", "))).fromJSValue()!
                     }
                     """
                 }

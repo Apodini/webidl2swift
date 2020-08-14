@@ -61,11 +61,7 @@ class DictionaryNode: TypeNode, Equatable {
         let cases = self.cases
 
         return """
-        public struct \(swiftTypeName): ExpressibleByDictionaryLiteral, JSValueCodable {
-
-            public static func canDecode(from jsValue: JSValue) -> Bool {
-                return jsValue.isObject
-            }
+        public struct \(swiftTypeName): ExpressibleByDictionaryLiteral, JSBridgedType {
 
             public enum Key: String, Hashable {
 
@@ -88,10 +84,14 @@ class DictionaryNode: TypeNode, Equatable {
                 dictionary[key.rawValue]
             }
 
-            public init(jsValue: JSValue) {
-
-                self.dictionary = jsValue.fromJSValue()
+            public init?(objectRef: JSObjectRef) {
+                if let dictionary: [String : AnyJSValueCodable] = objectRef.jsValue().fromJSValue() {
+                    self.dictionary = dictionary
+                }
+                return nil
             }
+
+            public var objectRef: JSObjectRef { jsValue().object! }
 
             public func jsValue() -> JSValue {
                 return dictionary.jsValue()

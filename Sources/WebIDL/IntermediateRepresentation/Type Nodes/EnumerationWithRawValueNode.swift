@@ -37,23 +37,18 @@ class EnumerationWithRawValueNode: TypeNode, Equatable {
         var declaration = """
         public enum \(typeName): String, JSValueCodable {
 
-            public static func canDecode(from jsValue: JSValue) -> Bool {
-                return jsValue.isString
+            public static func construct(from jsValue: JSValue) -> \(typeName)? {
+                if let string = jsValue.string,
+                   let value = \(typeName)(rawValue: string) {
+                    return value
+                }
+                return nil
             }
 
         """
 
         declaration += casesAndRawValues.map { "case \($0.0) = \"\($0.1)\"" }.joined(separator: "\n")
         declaration += """
-
-
-            public init(jsValue: JSValue) {
-
-                guard let value = \(typeName)(rawValue: jsValue.fromJSValue()) else {
-                    fatalError()
-                }
-                self = value
-            }
 
             public func jsValue() -> JSValue {
                 return rawValue.jsValue()

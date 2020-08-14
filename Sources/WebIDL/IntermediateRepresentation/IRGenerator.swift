@@ -183,7 +183,7 @@ public class IRGenerator {
                 return handleReadOnlyMember(readOnlyMember)
 
             case .stringifier:
-                // Not required: JSBridgedType conforms to CustomStringConvertible
+                // Not required: JSBridgedClass conforms to CustomStringConvertible
                 return nil
 
             case .staticMember(let staticMember, _):

@@ -81,7 +81,7 @@ class ReadonlyPropertyNode: PropertyNode, Equatable {
                 _swiftDeclarations(inContext: inContext) + """
                 {
                     get {
-                        return objectRef.\(name).fromJSValue() as \(dataTypeNode.typeErasedSwiftType)
+                        return objectRef.\(name).fromJSValue()! as \(dataTypeNode.typeErasedSwiftType)
                     }
                 }
                 """
@@ -95,7 +95,7 @@ class ReadonlyPropertyNode: PropertyNode, Equatable {
                 _swiftDeclarations(inContext: inContext) + """
                  {
                     get {
-                        return objectRef.\(name).fromJSValue()
+                        return objectRef.\(name).fromJSValue()!
                     }
                 }
                 """

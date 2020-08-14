@@ -60,7 +60,7 @@ class ClassNode: TypeNode, Equatable {
             inheritance = (sorted.map { unwrapNode($0).swiftTypeName } + adoptedProtocols).joined(separator: ", ")
         } else {
             isBaseClass = true
-            inheritance = (["JSBridgedType"] + sorted.map { unwrapNode($0).swiftTypeName } + adoptedProtocols).joined(separator: ", ")
+            inheritance = (["JSBridgedClass"] + sorted.map { unwrapNode($0).swiftTypeName } + adoptedProtocols).joined(separator: ", ")
         }
 
         if isBaseClass {
@@ -71,7 +71,7 @@ class ClassNode: TypeNode, Equatable {
 
                 public let objectRef: JSObjectRef
 
-                public required init(objectRef: JSObjectRef) {
+                public required init(withCompatibleObject objectRef: JSObjectRef) {
                     \(propertyNodes.compactMap { $0.initializationStatement(forContext: context) }.joined(separator: "\n"))
                     self.objectRef = objectRef
                 }
@@ -83,9 +83,9 @@ class ClassNode: TypeNode, Equatable {
 
                 public override class var classRef: JSFunctionRef { JSObjectRef.global.\(typeName).function! }
 
-                public required init(objectRef: JSObjectRef) {
+                public required init(withCompatibleObject objectRef: JSObjectRef) {
                     \(propertyNodes.compactMap { $0.initializationStatement(forContext: context) }.joined(separator: "\n"))
-                    super.init(objectRef: objectRef)
+                    super.init(withCompatibleObject: objectRef)
                 }
 
             """

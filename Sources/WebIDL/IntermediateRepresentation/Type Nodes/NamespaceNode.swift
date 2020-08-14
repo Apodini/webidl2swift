@@ -33,7 +33,7 @@ class NamespaceNode: TypeNode, Equatable {
 
             public static var objectRef: JSObjectRef {
                 return JSObjectRef.global.\(typeName).object!
-            }
+            }\n
         """
 
         declaration += members

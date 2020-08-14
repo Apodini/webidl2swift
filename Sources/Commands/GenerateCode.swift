@@ -85,7 +85,6 @@ public struct GenerateCode: ParsableCommand {
          */
 
         import JavaScriptKit
-        import ECMAScript
 
 
         """
