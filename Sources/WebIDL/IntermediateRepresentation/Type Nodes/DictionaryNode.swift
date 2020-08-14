@@ -84,14 +84,14 @@ class DictionaryNode: TypeNode, Equatable {
                 dictionary[key.rawValue]
             }
 
-            public init?(objectRef: JSObjectRef) {
-                if let dictionary: [String : AnyJSValueCodable] = objectRef.jsValue().fromJSValue() {
+            public init?(from value: JSValue) {
+                if let dictionary: [String : AnyJSValueCodable] = value.fromJSValue() {
                     self.dictionary = dictionary
                 }
                 return nil
             }
 
-            public var objectRef: JSObjectRef { jsValue().object! }
+            public var value: JSValue { jsValue() }
 
             public func jsValue() -> JSValue {
                 return dictionary.jsValue()

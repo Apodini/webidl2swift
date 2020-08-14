@@ -106,8 +106,8 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
                 let typeName = unwrapNode(nodePointer).swiftTypeName
 
                 initMap.append("""
-                    if let value = \(typeName)(objectRef: objectRef) {
-                        self = .\(caseName)(value)
+                    if let decoded: \(typeName) = value.fromJSValue() {
+                        self = .\(caseName)(decoded)
                     }
                     """)
 
@@ -124,7 +124,7 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
         declaration += """
 
 
-        public init?(objectRef: JSObjectRef) {
+        public init?(from value: JSValue) {
 
         """
         declaration += initMap.joined(separator: " else ")
@@ -135,11 +135,7 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
         declaration += "\n\n"
 
         declaration += """
-        public var objectRef: JSObjectRef {
-            switch self {
-            \(caseNames.map { "case .\($0)(let v): return v.objectRef" }.joined(separator: "\n"))
-            }
-        }
+        public var value: JSValue { jsValue() }
 
         public func jsValue() -> JSValue {
             switch self {

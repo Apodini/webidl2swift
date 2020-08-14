@@ -40,7 +40,7 @@ class ProtocolNode: TypeNode, Equatable {
         let (namedSubscript, indexedSubscript) = SubscriptNode.mergedSubscriptNodes(requiredMembers.filter { $0.isSubscript } as! [SubscriptNode])
         // swiftlint:enable force_cast
 
-        let inheritsFrom = ["JSBridgedType"] + self.inheritsFrom.map { unwrapNode($0).swiftTypeName }.sorted()
+        let inheritsFrom = ["JSBridgedClass"] + self.inheritsFrom.map { unwrapNode($0).swiftTypeName }.sorted()
         var declaration =  """
         public protocol \(typeName): \(inheritsFrom.joined(separator: ", ")) {
 
