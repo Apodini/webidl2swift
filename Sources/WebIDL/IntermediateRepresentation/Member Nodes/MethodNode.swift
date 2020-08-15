@@ -20,16 +20,61 @@ class MethodNode: MemberNode, Equatable {
         true
     }
 
+    private func _generateOverloads() -> [[ParameterNode]] {
+        var parameters = self.parameters
+        var removedParameter = false
+        var overloads = [parameters]
+        repeat {
+            removedParameter = false
+            if let index = parameters.lastIndex(where: { $0.isOmittable && $0.defaultValue == nil }) {
+                parameters.removeSubrange( index ..< parameters.endIndex)
+                overloads.append(parameters)
+                removedParameter = true
+            }
+        } while removedParameter || parameters.contains(where: { $0.isOmittable && $0.defaultValue == nil })
+        
+        for parameter in parameters {
+            let isOptional = parameter.dataType.node!.isOptional
+            guard let node = (isOptional ? (parameter.dataType.node as? OptionalNode)?.wrapped.node : parameter.dataType.node) as? ProtocolNode,
+                  node.kind == .callback
+            else { continue }
+            for params in overloads {
+                var params = params
+                guard let idx = params.firstIndex(where: { $0.label == parameter.label }) else { continue }
+                let param = params[idx]
+                let method = node.requiredMembers.first { $0.isMethod && !$0.isStatic && !$0.isSubscript } as! MethodNode
+                let closureNode = ClosureNode(arguments: method.parameters.map { $0.dataType }, returnType: method.returnType)
+                params[idx] = ParameterNode(
+                        label: param.label,
+                        dataType: NodePointer(
+                            identifier: param.dataType.identifier,
+                            node: isOptional
+                                ? OptionalNode(
+                                    wrapped: NodePointer(
+                                        identifier: (param.dataType.node as! OptionalNode).wrapped.identifier,
+                                        node: closureNode
+                                    )
+                                )
+                                : closureNode
+                        ),
+                        isVariadic: param.isVariadic,
+                        isOmittable: param.isOmittable,
+                        defaultValue: param.defaultValue
+                    )
+                overloads.append(params)
+            }
+        }
+
+        return overloads
+    }
+
     // swiftlint:disable cyclomatic_complexity function_body_length
     private func _swiftDeclaration(inContext context: MemberNodeContext, withImplementation: Bool) -> [String] {
 
         var declarations = [String]()
-        var parameters = self.parameters
+        let overloads = _generateOverloads()
 
-        var removedParameter = false
-        repeat {
-            removedParameter = false
-
+        for parameters in overloads {
             var declaration: String
 
             switch context {
@@ -59,7 +104,11 @@ class MethodNode: MemberNode, Equatable {
                         typeConstraints.append("\(type): \(dataTypeNode.swiftTypeName)")
                     }
                 } else if dataTypeNode.isClosure {
-                    type = "@escaping \(dataTypeNode.swiftTypeName)"
+                    if dataTypeNode.isOptional {
+                        type = dataTypeNode.swiftTypeName
+                    } else {
+                        type = "@escaping \(dataTypeNode.swiftTypeName)"
+                    }
                 } else {
                     type = dataTypeNode.swiftTypeName
                 }
@@ -103,29 +152,41 @@ class MethodNode: MemberNode, Equatable {
                     let dataTypeNode = unwrapNode($0.dataType)
                     if dataTypeNode.isClosure {
 
+                        let closureOptional: Bool
                         let closureNode: ClosureNode
                         if let cNode = dataTypeNode as? ClosureNode {
-                             closureNode = cNode
+                            closureNode = cNode
+                            closureOptional = false
                         } else if let aliasNode = dataTypeNode as? AliasNode, let cNode = aliasNode.aliased as? ClosureNode {
                             closureNode = cNode
+                            closureOptional = false
                         } else if let aliasNode = dataTypeNode as? AliasNode, let optionalNode = aliasNode.aliased as? OptionalNode, let cNode = optionalNode.wrapped.node as? ClosureNode {
                             closureNode = cNode
+                            closureOptional = false // FIXME: or true?
+                        } else if let optionalNode = dataTypeNode as? OptionalNode, let cNode = optionalNode.wrapped.node as? ClosureNode {
+                            closureNode = cNode
+                            closureOptional = true
                         } else {
-                            fatalError("Unknown closure type.")
+                            fatalError("Unknown closure type \(dataTypeNode).")
                         }
 
                         let returnValue: String
                         if closureNode.returnType.identifier == "Void" {
                             returnValue = ""
                         } else {
-                            returnValue = ".fromJSValue()!"
+                            returnValue = ".jsValue()"
                         }
 
                         let argumentCount = closureNode.arguments.count
                         let closureArguments = (0 ..< argumentCount)
                             .map { "$0[\($0)].fromJSValue()!" }
                             .joined(separator: ", ")
-                        return "JSClosure { \($0.label)(\(closureArguments))\(returnValue) }"
+                        let closureCode = "JSClosure { \($0.label)\(closureOptional ? "!" : "")(\(closureArguments))\(returnValue) }"
+                        if closureOptional {
+                            return "\($0.label) == nil ? nil : \(closureCode)"
+                        } else {
+                             return closureCode
+                        }
                     } else {
                         return $0.label + ".jsValue()"
                     }
@@ -153,12 +214,7 @@ class MethodNode: MemberNode, Equatable {
             }
 
             declarations.append(declaration)
-
-            if let index = parameters.lastIndex(where: { $0.isOmittable && $0.defaultValue == nil }) {
-                parameters.removeSubrange( index ..< parameters.endIndex)
-                removedParameter = true
-            }
-        } while removedParameter || parameters.contains(where: { $0.isOmittable && $0.defaultValue == nil })
+        }
 
         return declarations
     }
