@@ -8,15 +8,17 @@ class ProtocolNode: TypeNode, Equatable {
 
     let typeName: String
     var inheritsFrom: Set<NodePointer>
+    let kind: ProtocolKind
 
     var requiredMembers: [MemberNode]
     var defaultImplementations: [MemberNode]
 
-    internal init(typeName: String, inheritsFrom: Set<NodePointer>, requiredMembers: [MemberNode], defaultImplementations: [MemberNode]) {
+    internal init(typeName: String, inheritsFrom: Set<NodePointer>, requiredMembers: [MemberNode], defaultImplementations: [MemberNode], kind: ProtocolKind) {
         self.typeName = typeName
         self.inheritsFrom = inheritsFrom
         self.requiredMembers = requiredMembers
         self.defaultImplementations = defaultImplementations
+        self.kind = kind
     }
 
     var isProtocol: Bool {
@@ -40,7 +42,15 @@ class ProtocolNode: TypeNode, Equatable {
         let (namedSubscript, indexedSubscript) = SubscriptNode.mergedSubscriptNodes(requiredMembers.filter { $0.isSubscript } as! [SubscriptNode])
         // swiftlint:enable force_cast
 
-        let inheritsFrom = ["JSBridgedClass"] + self.inheritsFrom.map { unwrapNode($0).swiftTypeName }.sorted()
+        let primaryType: String
+        switch kind {
+        case .callback:
+            primaryType = "JSBridgedType"
+        case .mixin:
+            primaryType = "JSBridgedClass"
+        }
+
+        let inheritsFrom = [primaryType] + self.inheritsFrom.map { unwrapNode($0).swiftTypeName }.sorted()
         var declaration =  """
         public protocol \(typeName): \(inheritsFrom.joined(separator: ", ")) {
 

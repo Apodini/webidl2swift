@@ -57,6 +57,13 @@ public class NodePointer: Hashable {
     }
 }
 
+public enum ProtocolKind {
+    /// `callback interface`
+    case callback
+    /// `interface mixin`
+    case mixin
+}
+
 public class IntermediateRepresentation: Collection {
 
     public typealias Index = Swift.Dictionary<String, NodePointer>.Index
@@ -240,7 +247,7 @@ public class IntermediateRepresentation: Collection {
     }
 
     @discardableResult
-    func registerProtocol(withTypeName typeName: String, inheritsFrom: Set<NodePointer>, requiredMembers: [MemberNode], defaultImplementations: [MemberNode]) -> NodePointer {
+    func registerProtocol(withTypeName typeName: String, inheritsFrom: Set<NodePointer>, requiredMembers: [MemberNode], defaultImplementations: [MemberNode], kind: ProtocolKind) -> NodePointer {
 
         let nodePointer = existingOrNewNodePointer(for: typeName)
         let typeErasedPointer = existingOrNewNodePointer(for: "Any\(typeName)")
@@ -252,7 +259,7 @@ public class IntermediateRepresentation: Collection {
             existingProtocolNode.requiredMembers.append(contentsOf: requiredMembers)
             existingProtocolNode.defaultImplementations.append(contentsOf: defaultImplementations)
         } else {
-            nodePointer.node = ProtocolNode(typeName: typeName, inheritsFrom: inheritsFrom, requiredMembers: requiredMembers, defaultImplementations: defaultImplementations)
+            nodePointer.node = ProtocolNode(typeName: typeName, inheritsFrom: inheritsFrom, requiredMembers: requiredMembers, defaultImplementations: defaultImplementations, kind: kind)
             typeErasedPointer.node = TypeErasedWrapperStructNode(wrapped: nodePointer)
         }
 

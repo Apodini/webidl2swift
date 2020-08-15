@@ -137,7 +137,7 @@ public class IRGenerator {
             }
         }
 
-        ir.registerProtocol(withTypeName: mixin.identifier, inheritsFrom: [], requiredMembers: [], defaultImplementations: members)
+        ir.registerProtocol(withTypeName: mixin.identifier, inheritsFrom: [], requiredMembers: [], defaultImplementations: members, kind: .mixin)
     }
 
     func handleEnum(_ enumeration: Enum) {
@@ -222,7 +222,7 @@ public class IRGenerator {
             }
         }
 
-        ir.registerProtocol(withTypeName: callbackInterface.identifer, inheritsFrom: [], requiredMembers: requiredMembers, defaultImplementations: defaultImplementations)
+        ir.registerProtocol(withTypeName: callbackInterface.identifer, inheritsFrom: [], requiredMembers: requiredMembers, defaultImplementations: defaultImplementations, kind: .callback)
     }
 
     func handleTypedef(_ typedef: Typedef) {
