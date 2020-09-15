@@ -34,28 +34,39 @@ class MethodNode: MemberNode, Equatable {
         } while removedParameter || parameters.contains(where: { $0.isOmittable && $0.defaultValue == nil })
         
         for parameter in parameters {
-            let isOptional = parameter.dataType.node!.isOptional
-            guard let node = (isOptional ? (parameter.dataType.node as? OptionalNode)?.wrapped.node : parameter.dataType.node) as? ProtocolNode,
-                  node.kind == .callback
-            else { continue }
+            let unwrapped: ProtocolNode
+            if let optional = parameter.dataType.node as? OptionalNode {
+                guard let node = optional.wrapped.node as? ProtocolNode else { continue }
+                unwrapped = node
+            } else {
+                guard let node = parameter.dataType.node as? ProtocolNode else { continue }
+                unwrapped = node
+            }
+            guard unwrapped.kind == .callback else { continue }
             for params in overloads {
                 var params = params
                 guard let idx = params.firstIndex(where: { $0.label == parameter.label }) else { continue }
                 let param = params[idx]
-                let method = node.requiredMembers.first { $0.isMethod && !$0.isStatic && !$0.isSubscript } as! MethodNode
+                guard let method = unwrapped.requiredMembers.first(where: { $0.isMethod && !$0.isStatic && !$0.isSubscript }) as? MethodNode else { continue }
                 let closureNode = ClosureNode(arguments: method.parameters.map { $0.dataType }, returnType: method.returnType)
+                let typeNode: TypeNode
+
+                if let optional = parameter.dataType.node as? OptionalNode {
+                    typeNode = OptionalNode(
+                        wrapped: NodePointer(
+                            identifier: optional.wrapped.identifier,
+                            node: closureNode
+                        )
+                    )
+                } else {
+                    typeNode = closureNode
+                }
+
                 params[idx] = ParameterNode(
                         label: param.label,
                         dataType: NodePointer(
                             identifier: param.dataType.identifier,
-                            node: isOptional
-                                ? OptionalNode(
-                                    wrapped: NodePointer(
-                                        identifier: (param.dataType.node as! OptionalNode).wrapped.identifier,
-                                        node: closureNode
-                                    )
-                                )
-                                : closureNode
+                            node: typeNode
                         ),
                         isVariadic: param.isVariadic,
                         isOmittable: param.isOmittable,
