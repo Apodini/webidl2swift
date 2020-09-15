@@ -195,19 +195,19 @@ class MethodNode: MemberNode, Equatable {
                 if returnType.identifier == "Void" {
                     declaration += """
                      {
-                    _ = objectRef.\(name)!(\(passedParameters.joined(separator: ", ")))
+                    _ = jsObject.\(name)!(\(passedParameters.joined(separator: ", ")))
                     }
                     """
                 } else if unwrapNode(returnType).isProtocol {
                     declaration += """
                      {
-                    return objectRef.\(name)!(\(passedParameters.joined(separator: ", "))).fromJSValue()! as \(unwrapNode(returnType).typeErasedSwiftType)
+                    return jsObject.\(name)!(\(passedParameters.joined(separator: ", "))).fromJSValue()! as \(unwrapNode(returnType).typeErasedSwiftType)
                     }
                     """
                 } else {
                     declaration += """
                      {
-                        return objectRef.\(name)!(\(passedParameters.joined(separator: ", "))).fromJSValue()!
+                        return jsObject.\(name)!(\(passedParameters.joined(separator: ", "))).fromJSValue()!
                     }
                     """
                 }

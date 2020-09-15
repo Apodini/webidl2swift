@@ -67,13 +67,13 @@ class ClassNode: TypeNode, Equatable {
             declaration = """
             public class \(typeName): \(inheritance) {
 
-                public class var classRef: JSFunctionRef { JSObjectRef.global.\(typeName).function! }
+                public class var constructor: JSFunction { JSObject.global.\(typeName).function! }
 
-                public let objectRef: JSObjectRef
+                public let jsObject: JSObject
 
-                public required init(withCompatibleObject objectRef: JSObjectRef) {
+                public required init(withCompatibleObject jsObject: JSObject) {
                     \(propertyNodes.compactMap { $0.initializationStatement(forContext: context) }.joined(separator: "\n"))
-                    self.objectRef = objectRef
+                    self.jsObject = jsObject
                 }
 
             """
@@ -81,11 +81,11 @@ class ClassNode: TypeNode, Equatable {
             declaration = """
             public class \(typeName): \(inheritance) {
 
-                public override class var classRef: JSFunctionRef { JSObjectRef.global.\(typeName).function! }
+                public override class var constructor: JSFunction { JSObject.global.\(typeName).function! }
 
-                public required init(withCompatibleObject objectRef: JSObjectRef) {
+                public required init(withCompatibleObject jsObject: JSObject) {
                     \(propertyNodes.compactMap { $0.initializationStatement(forContext: context) }.joined(separator: "\n"))
-                    super.init(withCompatibleObject: objectRef)
+                    super.init(withCompatibleObject: jsObject)
                 }
 
             """

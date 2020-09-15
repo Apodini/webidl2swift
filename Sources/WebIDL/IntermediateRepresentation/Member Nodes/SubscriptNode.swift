@@ -70,9 +70,9 @@ class SubscriptNode: MemberNode, Equatable {
             let lookup: String
             declaration += " {\n"
             if isNamed {
-                lookup = "objectRef.\(escapedName(nameParameter.label))"
+                lookup = "jsObject.\(escapedName(nameParameter.label))"
             } else {
-                lookup = "objectRef[\(nameParameter.label)]"
+                lookup = "jsObject[\(nameParameter.label)]"
             }
 
             if returnTypeNode.isProtocol {

@@ -22,7 +22,7 @@ class ReadonlyPropertyNode: PropertyNode, Equatable {
         }
 
         return """
-        _\(name) = ReadonlyAttribute(objectRef: objectRef, name: "\(name)")
+        _\(name) = ReadonlyAttribute(jsObject: jsObject, name: "\(name)")
         """
     }
 
@@ -46,7 +46,7 @@ class ReadonlyPropertyNode: PropertyNode, Equatable {
 
         case (.classContext, true):
             declaration = """
-            @ReadonlyAttribute(objectRef: Self.classRef, name: "\(name)")
+            @ReadonlyAttribute(jsObject: Self.constructor, name: "\(name)")
             public static var \(escapedName(name)): \(dataTypeNode.swiftTypeName)
             """
 
@@ -81,7 +81,7 @@ class ReadonlyPropertyNode: PropertyNode, Equatable {
                 _swiftDeclarations(inContext: inContext) + """
                 {
                     get {
-                        return objectRef.\(name).fromJSValue()! as \(dataTypeNode.typeErasedSwiftType)
+                        return jsObject.\(name).fromJSValue()! as \(dataTypeNode.typeErasedSwiftType)
                     }
                 }
                 """
@@ -95,7 +95,7 @@ class ReadonlyPropertyNode: PropertyNode, Equatable {
                 _swiftDeclarations(inContext: inContext) + """
                  {
                     get {
-                        return objectRef.\(name).fromJSValue()!
+                        return jsObject.\(name).fromJSValue()!
                     }
                 }
                 """

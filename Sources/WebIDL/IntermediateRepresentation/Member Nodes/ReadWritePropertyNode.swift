@@ -32,11 +32,11 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
 
         if dataTypeNode.isClosure && dataTypeNode.numberOfClosureArguments == 1 {
             return """
-            _\(name) = \(dataTypeNode.isOptional ? "OptionalClosureHandler" : "ClosureHandler")(objectRef: objectRef, name: "\(name)")
+            _\(name) = \(dataTypeNode.isOptional ? "OptionalClosureHandler" : "ClosureHandler")(jsObject: jsObject, name: "\(name)")
             """
         } else if !isOverride {
             return """
-            _\(name) = ReadWriteAttribute(objectRef: objectRef, name: "\(name)")
+            _\(name) = ReadWriteAttribute(jsObject: jsObject, name: "\(name)")
             """
         } else {
             return nil
@@ -66,7 +66,7 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
 
         case (.classContext, true) where dataTypeNode.isClosure && dataTypeNode.isOptional && dataTypeNode.numberOfClosureArguments == 1:
             declaration = """
-            @OptionalClosureHandler(objectRef: Self.classRef, name: "\(name)")
+            @OptionalClosureHandler(jsObject: Self.constructor, name: "\(name)")
             public static var \(escaped): \(dataTypeNode.swiftTypeName)
             """
 
@@ -78,7 +78,7 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
 
         case (.classContext, true) where dataTypeNode.isClosure && dataTypeNode.numberOfClosureArguments == 1:
             declaration = """
-            @ClosureHandler(objectRef: Self.classRef, name: "\(name)")
+            @ClosureHandler(jsObject: Self.constructor, name: "\(name)")
             public var \(escaped): \(dataTypeNode.swiftTypeName)
             """
 
@@ -86,10 +86,10 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
             declaration = """
             public override var \(escaped): \(dataTypeNode.swiftTypeName) {
                 get {
-                    return objectRef.\(escaped)
+                    return jsObject.\(escaped)
                 }
                 set {
-                    objectRef.\(escaped) = newValue
+                    jsObject.\(escaped) = newValue
                 }
             }
             """
@@ -98,10 +98,10 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
             declaration = """
             public static override var \(escaped): \(dataTypeNode.swiftTypeName) {
                 get {
-                    return objectRef.\(escaped)
+                    return jsObject.\(escaped)
                 }
                 set {
-                    objectRef\(escaped) = newValue
+                    jsObject\(escaped) = newValue
                 }
             }
             """
@@ -114,7 +114,7 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
 
         case (.classContext, true):
             declaration = """
-            @ReadWriteAttribute(objectRef: Self.classRef, name: "\(name)")
+            @ReadWriteAttribute(jsObject: Self.constructor, name: "\(name)")
             public static var \(escaped): \(dataTypeNode.swiftTypeName)
             """
 
@@ -148,10 +148,10 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
                 _swiftDeclarations(inContext: inContext) + """
                 {
                     get {
-                        return objectRef.\(escaped).fromJSValue()! as \(dataTypeNode.typeErasedSwiftType)
+                        return jsObject.\(escaped).fromJSValue()! as \(dataTypeNode.typeErasedSwiftType)
                     }
                     set {
-                        objectRef.\(escaped) = newValue.jsValue()!
+                        jsObject.\(escaped) = newValue.jsValue()!
                     }
                 }
                 """
@@ -170,18 +170,18 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
                 _swiftDeclarations(inContext: inContext) + """
                  {
                     get {
-                        guard let function = objectRef.\(escaped).function else {
+                        guard let function = jsObject.\(escaped).function else {
                             return nil
                         }
                         return { (\(getterArguments)) in function(\(getterArguments)).fromJSValue()! }
                     }
                     set {
                         if let newValue = newValue {
-                            objectRef.\(escaped) = JSClosure { arguments in
+                            jsObject.\(escaped) = JSClosure { arguments in
                                 return newValue(\(setterArguments)).jsValue()
                             }.jsValue()
                         } else {
-                            objectRef.\(escaped) = .null
+                            jsObject.\(escaped) = .null
                         }
                     }
                 }
@@ -198,11 +198,11 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
                 _swiftDeclarations(inContext: inContext) + """
                 {
                     get {
-                        let function = objectRef.\(escaped).function!
+                        let function = jsObject.\(escaped).function!
                         return { (\(getterArguments)) in function(\(getterArguments)).fromJSValue()! }
                     }
                     set {
-                        objectRef.\(escaped) = JSClosure { arguments in
+                        jsObject.\(escaped) = JSClosure { arguments in
                             return newValue(\(setterArguments)).jsValue()
                         }.jsValue()
                     }
@@ -217,10 +217,10 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
                  _swiftDeclarations(inContext: inContext) + """
                   {
                      get {
-                         return objectRef.\(escaped).fromJSValue()!
+                         return jsObject.\(escaped).fromJSValue()!
                      }
                      set {
-                         objectRef.\(escaped) = newValue.jsValue()
+                         jsObject.\(escaped) = newValue.jsValue()
                      }
                  }
                  """
