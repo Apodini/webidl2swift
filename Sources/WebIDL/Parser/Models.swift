@@ -319,7 +319,7 @@ public struct Iterable: Equatable {
 public struct AsyncIterable: Equatable {
 
     public let typeWithExtendedAttributes0: TypeWithExtendedAttributes
-    public let typeWithExtendedAttributes1: TypeWithExtendedAttributes
+    public let typeWithExtendedAttributes1: TypeWithExtendedAttributes?
 }
 
 public enum ReadWriteAttribute: Equatable {

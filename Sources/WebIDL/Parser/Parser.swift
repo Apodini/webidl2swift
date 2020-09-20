@@ -982,18 +982,17 @@ public class Parser {
 
         /*
          AsyncIterable ::
-         async iterable < TypeWithExtendedAttributes , TypeWithExtendedAttributes > ;
+         async iterable < TypeWithExtendedAttributes OptionalType > ;
          */
         try expect(next: .terminal(.async))
         try expect(next: .terminal(.iterable))
         try expect(next: .terminal(.openingAngleBracket))
-        let typeWithExtendedAttributes0 = try parseTypeWithExtendedAttributes()
-        try expect(next: .terminal(.comma))
-        let typeWithExtendedAttribute1 = try parseTypeWithExtendedAttributes()
+        let typeWithExtendedAttributes = try parseTypeWithExtendedAttributes()
+        let optionalType = try parseOptionalType()
         try expect(next: .terminal(.closingAngleBracket))
         try expect(next: .terminal(.semicolon))
 
-        return AsyncIterable(typeWithExtendedAttributes0: typeWithExtendedAttributes0, typeWithExtendedAttributes1: typeWithExtendedAttribute1)
+        return AsyncIterable(typeWithExtendedAttributes0: typeWithExtendedAttributes, typeWithExtendedAttributes1: optionalType)
     }
 
     func parseReadOnlyMember(extendedAttributeList: ExtendedAttributeList) throws -> InterfaceMember {
