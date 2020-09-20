@@ -23,7 +23,7 @@ public struct Callback: Definition, Equatable {
 
     public let identifier: String
     public let extendedAttributeList: ExtendedAttributeList
-    public let returnType: ReturnType
+    public let returnType: Type
     public let argumentList: [Argument]
 }
 
@@ -114,7 +114,7 @@ public struct DictionaryMember: Equatable {
     public let isRequired: Bool
     public let extendedAttributeList: ExtendedAttributeList
 
-    public let dataType: DataType
+    public let type: Type
     public let extendedAttributesOfDataType: ExtendedAttributeList?
     public let defaultValue: DefaultValue?
 }
@@ -164,7 +164,7 @@ public enum Operation: Equatable {
 
 public struct RegularOperation: Equatable {
 
-    public let returnType: ReturnType
+    public let returnType: Type
     public let operationName: OperationName?
     public let argumentList: [Argument]
 }
@@ -194,7 +194,7 @@ public struct Argument: Equatable {
 
 public indirect enum ArgumentRest: Equatable {
     case optional(TypeWithExtendedAttributes, ArgumentName, DefaultValue?)
-    case nonOptional(DataType, _ ellipsis: Bool, ArgumentName)
+    case nonOptional(Type, _ ellipsis: Bool, ArgumentName)
 }
 
 public enum ArgumentName: Equatable {
@@ -225,7 +225,7 @@ public struct MaplikeRest: Equatable {
 }
 
 public struct SetlikeRest: Equatable {
-    public let dataType: TypeWithExtendedAttributes
+    public let elementType: TypeWithExtendedAttributes
 }
 
 public enum DefaultValue: Equatable {
@@ -266,17 +266,17 @@ public struct IncludesStatement: Definition, Equatable {
 public struct Typedef: Definition, Equatable {
 
     public let identifier: String
-    public let dataType: DataType
+    public let type: Type
     public let extendedAttributeList: ExtendedAttributeList
 }
 
 public struct TypeWithExtendedAttributes: Equatable {
 
-    public let dataType: DataType
+    public let type: Type
     public let extendedAttributeList: ExtendedAttributeList
 }
 
-public indirect enum DataType: Equatable {
+public indirect enum Type: Equatable {
     case single(SingleType)
     case union([UnionMemberType], Bool)
 }
@@ -285,6 +285,7 @@ public indirect enum SingleType: Equatable {
 
     case distinguishableType(DistinguishableType)
     case any
+    case undefined
     case promiseType(Promise)
 }
 
@@ -321,11 +322,6 @@ public struct AsyncIterable: Equatable {
     public let typeWithExtendedAttributes1: TypeWithExtendedAttributes
 }
 
-public enum ReturnType: Equatable {
-    case void
-    case dataType(DataType)
-}
-
 public enum ReadWriteAttribute: Equatable {
     case inherit(AttributeRest)
     case notInherit(AttributeRest)
@@ -333,7 +329,7 @@ public enum ReadWriteAttribute: Equatable {
 
 public struct Promise: Equatable {
 
-    public let returnType: ReturnType
+    public let returnType: Type
 }
 
 // swiftlint:disable identifier_name

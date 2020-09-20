@@ -99,15 +99,15 @@ final class ParserTests: XCTestCase {
         let parser = Parser(input: result)
         let definitions = try parser.parse()
 
-        let domStringType: DataType = .single(.distinguishableType(.string(.DOMString, false)))
-        let longlongType: DataType = .single(.distinguishableType(.primitive(.UnsignedIntegerType(.signed(.longLong)), false)))
+        let domStringType: Type = .single(.distinguishableType(.string(.DOMString, false)))
+        let longlongType: Type = .single(.distinguishableType(.primitive(.UnsignedIntegerType(.signed(.longLong)), false)))
 
         XCTAssertEqual(definitions as! [Dictionary], [
             Dictionary(identifier: "A", extendedAttributeList: [], inheritance: nil, members: [
-                .init(identifier: "a", isRequired: true, extendedAttributeList: [], dataType: domStringType, extendedAttributesOfDataType: [], defaultValue: nil)
+                .init(identifier: "a", isRequired: true, extendedAttributeList: [], type: domStringType, extendedAttributesOfDataType: [], defaultValue: nil)
             ]),
             Dictionary(identifier: "B", extendedAttributeList: [], inheritance: .init(identifier: "A"), members: [
-                .init(identifier: "b", isRequired: false, extendedAttributeList: [], dataType: longlongType, extendedAttributesOfDataType: nil, defaultValue: .constValue(.integer(42)))
+                .init(identifier: "b", isRequired: false, extendedAttributeList: [], type: longlongType, extendedAttributesOfDataType: nil, defaultValue: .constValue(.integer(42)))
             ]),
         ])
     }
@@ -142,7 +142,7 @@ final class ParserTests: XCTestCase {
         ]
 
         XCTAssertEqual(definitions as! [Typedef], [
-            Typedef(identifier: "String", dataType: .union(unionTypes, false), extendedAttributeList: [])
+            Typedef(identifier: "String", type: .union(unionTypes, false), extendedAttributeList: [])
         ])
     }
 
@@ -163,7 +163,7 @@ final class ParserTests: XCTestCase {
 
         let result = try Tokenizer.tokenize("""
         callback interface A {
-            void handle(any... data);
+            undefined handle(any... data);
         };
         """)
         let parser = Parser(input: result)
@@ -171,7 +171,7 @@ final class ParserTests: XCTestCase {
 
         XCTAssertEqual(definitions as! [CallbackInterface], [
             CallbackInterface(identifer: "A", extendedAttributeList: [], callbackInterfaceMembers: [
-                .regularOperation(.init(returnType: .void, operationName: .identifier("handle"), argumentList: [.init(rest: .nonOptional(.single(.any), true, .identifier("data")), extendedAttributeList: [])]), [])
+                .regularOperation(.init(returnType: .single(.undefined), operationName: .identifier("handle"), argumentList: [.init(rest: .nonOptional(.single(.any), true, .identifier("data")), extendedAttributeList: [])]), [])
             ])
         ])
     }
@@ -179,13 +179,13 @@ final class ParserTests: XCTestCase {
     func test_parseCallbackFunction() throws {
 
         let result = try Tokenizer.tokenize("""
-        callback CallbackHandler = void ();
+        callback CallbackHandler = undefined ();
         """)
         let parser = Parser(input: result)
         let definitions = try parser.parse()
 
         XCTAssertEqual(definitions as! [Callback], [
-            Callback(identifier: "CallbackHandler", extendedAttributeList: [], returnType: .void, argumentList: [])
+            Callback(identifier: "CallbackHandler", extendedAttributeList: [], returnType: .single(.undefined), argumentList: [])
         ])
     }
 }

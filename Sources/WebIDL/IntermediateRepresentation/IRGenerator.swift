@@ -75,7 +75,7 @@ public class IRGenerator {
             case .regularOperation(let regularOperation, _):
                 return handleRegularOperation(regularOperation)
             case .readonlyAttribute(let attributeRest):
-                let dataType = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
+                let dataType = handleType(attributeRest.typeWithExtendedAttributes.type)
                 let name = handleAttributeName(attributeRest.attributeName)
                 return ReadonlyPropertyNode(name: name, dataType: dataType, isStatic: false)
             }
@@ -126,12 +126,12 @@ public class IRGenerator {
                 return nil
 
             case .readOnlyAttributeRest(false, let attributeRest, _):
-                let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
+                let type = handleType(attributeRest.typeWithExtendedAttributes.type)
                 let name = handleAttributeName(attributeRest.attributeName)
                 return ReadWritePropertyNode(name: name, dataType: type, isOverride: false, isStatic: false)
 
             case .readOnlyAttributeRest(true, let attributeRest, _):
-                let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
+                let type = handleType(attributeRest.typeWithExtendedAttributes.type)
                 let name = handleAttributeName(attributeRest.attributeName)
                 return ReadonlyPropertyNode(name: name, dataType: type, isStatic: false)
             }
@@ -147,14 +147,14 @@ public class IRGenerator {
 
     func handleCallback(_ callback: Callback) {
 
-        let returnType = handleReturnType(callback.returnType)
+        let returnType = handleType(callback.returnType)
 
         let arguments: [NodePointer] = callback.argumentList.map {
             switch $0.rest {
             case .optional(let typeWithExtendedAttributes, _, _):
-                return handleDataType(typeWithExtendedAttributes.dataType)
+                return handleType(typeWithExtendedAttributes.type)
             case .nonOptional(let dataType, _, _):
-                return handleDataType(dataType)
+                return handleType(dataType)
             }
         }
 
@@ -227,7 +227,7 @@ public class IRGenerator {
 
     func handleTypedef(_ typedef: Typedef) {
 
-        let dataType = handleDataType(typedef.dataType)
+        let dataType = handleType(typedef.type)
         _ = ir.registerAliasNode(withTypeName: typedef.identifier, aliasing: unwrapNode(dataType))
     }
 
@@ -262,9 +262,9 @@ public class IRGenerator {
         ir.registerBasicType(withTypeName: "String")
     }
 
-    func handleDataType(_ dataType: DataType) -> NodePointer {
+    func handleType(_ type: Type) -> NodePointer {
 
-        switch dataType {
+        switch type {
         case .single(let singleType):
             return handleSingleType(singleType)
 
@@ -282,11 +282,14 @@ public class IRGenerator {
         switch singleType {
         case .distinguishableType(let  distinguishableType):
             return handleDistinguishableType(distinguishableType)
+
         case .any:
             return ir.registerBasicType(withTypeName: "JSValue")
+        case .undefined:
+            return ir.registerBasicType(withTypeName: "Void")
 
         case .promiseType(let promise):
-            let returnType = handleReturnType(promise.returnType)
+            let returnType = handleType(promise.returnType)
             return ir.registerBasicType(withTypeName: "Promise<\(returnType.identifier)>")
         }
     }
@@ -335,7 +338,7 @@ public class IRGenerator {
             return nodePointer
 
         case .sequence(let typeWithExtendedAttributes, let isNullable):
-            let type = handleDataType(typeWithExtendedAttributes.dataType)
+            let type = handleType(typeWithExtendedAttributes.type)
             let arrayNode = ir.registerArrayNode(withTypeName: "\(type.identifier)Sequence", element: type)
 
             if isNullable {
@@ -378,7 +381,7 @@ public class IRGenerator {
         case .bufferRelated(.Float64Array, let isNullable):
             return handleBufferRelatedWithScalarType("Float64Array", "Double", isNullable)
         case .frozenArray(let typeWithExtendedAttributes, let isNullable):
-            let type = handleDataType(typeWithExtendedAttributes.dataType)
+            let type = handleType(typeWithExtendedAttributes.type)
             let name = "\(type.identifier)Array"
             let arrayNode = ArrayNode(element: type)
             let aliasPointer = ir.registerAliasNode(withTypeName: name, aliasing: arrayNode)
@@ -395,7 +398,7 @@ public class IRGenerator {
 
     func handleRecordType(_ recordType: RecordType) -> NodePointer {
 
-        let valueType = handleDataType(recordType.typeWithExtendedAttributes.dataType)
+        let valueType = handleType(recordType.typeWithExtendedAttributes.type)
         let name = "\(valueType.identifier)Record"
         let recordNode = RecordNode(value: valueType)
         let aliasPointer = ir.registerAliasNode(withTypeName: name, aliasing: recordNode)
@@ -428,7 +431,7 @@ public class IRGenerator {
         switch readOnlyMember {
         case .attribute(let attribute):
             let name = handleAttributeName(attribute.attributeName)
-            let type = handleDataType(attribute.typeWithExtendedAttributes.dataType)
+            let type = handleType(attribute.typeWithExtendedAttributes.type)
 
             return ReadonlyPropertyNode(name: name, dataType: type, isStatic: false)
 
@@ -497,7 +500,7 @@ public class IRGenerator {
             return handleRegularOperation(regularOperation)
         case .special(let special, let regularOperation):
 
-            let returnType = handleReturnType(regularOperation.returnType)
+            let returnType = handleType(regularOperation.returnType)
             let parameters = handleArgumentList(regularOperation.argumentList)
             switch special {
             case .getter:
@@ -518,7 +521,7 @@ public class IRGenerator {
 
             switch argument.rest {
             case .optional(let typeWithExtendedAttributes, let label, .some(let defaultValue)):
-                let dataType = handleDataType(typeWithExtendedAttributes.dataType)
+                let dataType = handleType(typeWithExtendedAttributes.type)
                 return ParameterNode(label: handleArgumentName(label),
                                      dataType: dataType,
                                      isVariadic: false,
@@ -527,14 +530,14 @@ public class IRGenerator {
 
             case .optional(let typeWithExtendedAttributes, let label, .none):
                 return ParameterNode(label: handleArgumentName(label),
-                                     dataType: handleDataType(typeWithExtendedAttributes.dataType),
+                                     dataType: handleType(typeWithExtendedAttributes.type),
                                      isVariadic: false,
                                      isOmittable: true,
                                      defaultValue: nil)
 
             case .nonOptional(let dataType, let ellipsis, let label):
                 return ParameterNode(label: handleArgumentName(label),
-                                     dataType: handleDataType(dataType),
+                                     dataType: handleType(dataType),
                                      isVariadic: ellipsis,
                                      isOmittable: ellipsis,
                                      defaultValue: nil)
@@ -546,7 +549,7 @@ public class IRGenerator {
 
         if let operationName = regularOperation.operationName {
             let name = handleOperationName(operationName)
-            let returnType = handleReturnType(regularOperation.returnType)
+            let returnType = handleType(regularOperation.returnType)
 
             return MethodNode(name: name, returnType: returnType, parameters: handleArgumentList(regularOperation.argumentList))
         } else {
@@ -562,17 +565,6 @@ public class IRGenerator {
 
         case .includes:
             fatalError("includes OperationName not supported.")
-        }
-    }
-
-    func handleReturnType(_ returnType: ReturnType) -> NodePointer {
-
-        switch returnType {
-        case .void:
-            return ir.registerBasicType(withTypeName: "Void")
-
-        case .dataType(let dataType):
-            return handleDataType(dataType)
         }
     }
 
@@ -631,13 +623,13 @@ public class IRGenerator {
 
         switch readWriteAttribute {
         case .inherit(let attributeRest):
-            let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
+            let type = handleType(attributeRest.typeWithExtendedAttributes.type)
             let name = handleAttributeName(attributeRest.attributeName)
 
             return ReadWritePropertyNode(name: name, dataType: type, isOverride: true, isStatic: false)
 
         case .notInherit(let attributeRest):
-            let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
+            let type = handleType(attributeRest.typeWithExtendedAttributes.type)
             let name = handleAttributeName(attributeRest.attributeName)
 
             return ReadWritePropertyNode(name: name, dataType: type, isOverride: false, isStatic: false)
@@ -662,12 +654,12 @@ public class IRGenerator {
 
     func handleIterable(_ iterable: Iterable) -> MemberNode {
 
-        switch (iterable.typeWithExtendedAttributes0.dataType, iterable.typeWithExtendedAttributes1?.dataType) {
+        switch (iterable.typeWithExtendedAttributes0.type, iterable.typeWithExtendedAttributes1?.type) {
         case (_, let second?):
-            return PairIterableNode(dataType: handleDataType(second))
+            return PairIterableNode(dataType: handleType(second))
 
         case (let first, nil):
-            return ValueIterableNode(dataType: handleDataType(first))
+            return ValueIterableNode(dataType: handleType(first))
         }
     }
 
@@ -675,13 +667,13 @@ public class IRGenerator {
 
         switch staticMember {
         case .readOnlyAttributeRest(false, let attributeRest):
-            let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
+            let type = handleType(attributeRest.typeWithExtendedAttributes.type)
             let name = handleAttributeName(attributeRest.attributeName)
 
             return ReadWritePropertyNode(name: name, dataType: type, isOverride: false, isStatic: true)
 
         case .readOnlyAttributeRest(true, let attributeRest):
-            let type = handleDataType(attributeRest.typeWithExtendedAttributes.dataType)
+            let type = handleType(attributeRest.typeWithExtendedAttributes.type)
             let name = handleAttributeName(attributeRest.attributeName)
 
             return ReadonlyPropertyNode(name: name, dataType: type, isStatic: true)
