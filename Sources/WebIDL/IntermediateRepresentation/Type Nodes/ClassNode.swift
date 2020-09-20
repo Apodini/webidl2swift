@@ -71,7 +71,7 @@ class ClassNode: TypeNode, Equatable {
 
                 public let jsObject: JSObject
 
-                public required init(withCompatibleObject jsObject: JSObject) {
+                public required init(unsafelyWrapping jsObject: JSObject) {
                     \(propertyNodes.compactMap { $0.initializationStatement(forContext: context) }.joined(separator: "\n"))
                     self.jsObject = jsObject
                 }
@@ -83,9 +83,9 @@ class ClassNode: TypeNode, Equatable {
 
                 public override class var constructor: JSFunction { JSObject.global.\(typeName).function! }
 
-                public required init(withCompatibleObject jsObject: JSObject) {
+                public required init(unsafelyWrapping jsObject: JSObject) {
                     \(propertyNodes.compactMap { $0.initializationStatement(forContext: context) }.joined(separator: "\n"))
-                    super.init(withCompatibleObject: jsObject)
+                    super.init(unsafelyWrapping: jsObject)
                 }
 
             """

@@ -283,7 +283,7 @@ public class IRGenerator {
         case .distinguishableType(let  distinguishableType):
             return handleDistinguishableType(distinguishableType)
         case .any:
-            return ir.registerBasicType(withTypeName: "AnyJSValueCodable")
+            return ir.registerBasicType(withTypeName: "JSValue")
 
         case .promiseType(let promise):
             let returnType = handleReturnType(promise.returnType)
@@ -344,7 +344,7 @@ public class IRGenerator {
             return arrayNode
 
         case .object(let isNullable):
-            let nodePointer = ir.registerBasicType(withTypeName: "AnyJSValueCodable")
+            let nodePointer = ir.registerBasicType(withTypeName: "JSValue")
             if isNullable {
                 return insertOptional(for: nodePointer)
             }

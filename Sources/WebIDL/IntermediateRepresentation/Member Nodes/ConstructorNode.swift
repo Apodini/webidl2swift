@@ -123,7 +123,7 @@ class ConstructorNode: MemberNode, Equatable {
                 }
                 declaration += """
                  {
-                    self.init(withCompatibleObject: \(className).constructor.new(\(passedParameters.joined(separator: ", "))))
+                    self.init(unsafelyWrapping: \(className).constructor.new(\(passedParameters.joined(separator: ", "))))
                 }
                 """
             }
