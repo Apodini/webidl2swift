@@ -320,6 +320,7 @@ public struct AsyncIterable: Equatable {
 
     public let typeWithExtendedAttributes0: TypeWithExtendedAttributes
     public let typeWithExtendedAttributes1: TypeWithExtendedAttributes?
+    public let argumentList: [Argument]?
 }
 
 public enum ReadWriteAttribute: Equatable {
