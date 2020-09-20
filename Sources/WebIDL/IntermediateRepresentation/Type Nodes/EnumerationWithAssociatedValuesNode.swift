@@ -117,7 +117,7 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
 
         initMap.append("""
             {
-                fatalError()
+                return nil
             }
             """)
 
