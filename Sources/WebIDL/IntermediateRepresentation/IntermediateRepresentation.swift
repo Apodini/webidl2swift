@@ -265,7 +265,7 @@ public class IntermediateRepresentation: Collection {
         let nodePointer = existingOrNewNodePointer(for: typeName)
         if let alreadyRegisterd = nodePointer.node {
             guard let existingClass = alreadyRegisterd as? ClassNode else {
-                fatalError("Type mismatch for already registered Type!")
+                fatalError("Type mismatch for already registered Type \(typeName): \(type(of: alreadyRegisterd)) -> Class!")
             }
             existingClass.inheritsFrom.formUnion(inheritsFrom)
             existingClass.members.append(contentsOf: members)
