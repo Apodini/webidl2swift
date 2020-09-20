@@ -1000,10 +1000,9 @@ public class Parser {
         guard check(forNext: .terminal(.openingParenthesis)) else {
             return nil
         }
-        try expect(next: .terminal(.openingParenthesis))
         let argumentList = try parseArgumentList()
         try expect(next: .terminal(.closingParenthesis))
-        return try argumentList
+        return argumentList
     }
 
     func parseReadOnlyMember(extendedAttributeList: ExtendedAttributeList) throws -> InterfaceMember {
