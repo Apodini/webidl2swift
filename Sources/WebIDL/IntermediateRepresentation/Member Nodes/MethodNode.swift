@@ -20,6 +20,7 @@ class MethodNode: MemberNode, Equatable {
         true
     }
 
+    // swiftlint:disable cyclomatic_complexity function_body_length
     private func _generateOverloads() -> [[ParameterNode]] {
         var parameters = self.parameters
         var removedParameter = false
@@ -173,7 +174,7 @@ class MethodNode: MemberNode, Equatable {
                             closureOptional = false
                         } else if let aliasNode = dataTypeNode as? AliasNode, let optionalNode = aliasNode.aliased as? OptionalNode, let cNode = optionalNode.wrapped.node as? ClosureNode {
                             closureNode = cNode
-                            closureOptional = false // FIXME: or true?
+                            closureOptional = true
                         } else if let optionalNode = dataTypeNode as? OptionalNode, let cNode = optionalNode.wrapped.node as? ClosureNode {
                             closureNode = cNode
                             closureOptional = true
