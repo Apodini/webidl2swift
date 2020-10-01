@@ -48,7 +48,9 @@ class MethodNode: MemberNode, Equatable {
                 var params = params
                 guard let idx = params.firstIndex(where: { $0.label == parameter.label }) else { continue }
                 let param = params[idx]
-                guard let method = unwrapped.requiredMembers.first(where: { $0.isMethod && !$0.isStatic && !$0.isSubscript }) as? MethodNode else { continue }
+                guard let method = unwrapped.requiredMembers.first(
+                    where: { $0.isMethod && !$0.isStatic && !$0.isSubscript }
+                ) as? MethodNode else { continue }
                 let closureNode = ClosureNode(arguments: method.parameters.map { $0.dataType }, returnType: method.returnType)
                 let typeNode: TypeNode
 
