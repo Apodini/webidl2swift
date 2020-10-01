@@ -1635,7 +1635,8 @@ public class Parser {
          SingleType ::
          DistinguishableType
          any
-         undefinedå
+         undefined
+         void [removed from most recent spec]
          PromiseType
          */
 
@@ -1648,7 +1649,7 @@ public class Parser {
             tokens.removeFirst()
             return .any
 
-        case .terminal(.undefined):
+        case .terminal(.undefined), .terminal(.void):
             tokens.removeFirst()
             return .undefined
 
@@ -2444,7 +2445,7 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
     case .SingleType:
         return union(
             firstSet(for: .DistinguishableType),
-            [.terminal(.any), .terminal(.undefined)],
+            [.terminal(.any), .terminal(.undefined), .terminal(.void)],
             firstSet(for: .PromiseType)
         )
 

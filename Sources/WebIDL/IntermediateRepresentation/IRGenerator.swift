@@ -196,7 +196,6 @@ public class IRGenerator {
                  .readWriteMaplike,
                  .readWriteSetlike:
                 fatalError("Member type \(member) not yet implemented")
-                return nil
             }
         }
 
