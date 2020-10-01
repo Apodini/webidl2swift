@@ -24,15 +24,15 @@ interface WebSocket : EventTarget {
     attribute EventHandler onclose;
     //readonly attribute DOMString extensions;
     readonly attribute DOMString protocol;
-    [Throws] void close(optional [Clamp] unsigned short code, optional USVString reason);
+    [Throws] undefined close(optional [Clamp] unsigned short code, optional USVString reason);
 
     //messaging
     attribute EventHandler onmessage;
     attribute BinaryType binaryType;
-    [Throws] void send(USVString data);
-    [Throws] void send(Blob data);
-    [Throws] void send(ArrayBuffer data);
-    [Throws] void send(ArrayBufferView data);
+    [Throws] undefined send(USVString data);
+    [Throws] undefined send(Blob data);
+    [Throws] undefined send(ArrayBuffer data);
+    [Throws] undefined send(ArrayBufferView data);
 };
 
 interface MessageEvent : Event {
@@ -44,7 +44,7 @@ interface MessageEvent : Event {
   readonly attribute MessageEventSource? source;
   readonly attribute FrozenArray<MessagePort> ports;
 
-  void initMessageEvent(DOMString type, optional boolean bubbles = false, optional boolean cancelable = false, optional any data = null, optional USVString origin = "", optional DOMString lastEventId = "", optional MessageEventSource? source = null, optional sequence<MessagePort> ports = []);
+  undefined initMessageEvent(DOMString type, optional boolean bubbles = false, optional boolean cancelable = false, optional any data = null, optional USVString origin = "", optional DOMString lastEventId = "", optional MessageEventSource? source = null, optional sequence<MessagePort> ports = []);
 };
 
 dictionary MessageEventInit : EventInit {
@@ -60,10 +60,10 @@ typedef (MessagePort or ServiceWorker) MessageEventSource;
 
 [Exposed=(Window,Worker,AudioWorklet), Transferable]
 interface MessagePort : EventTarget {
-  void postMessage(any message, sequence<object> transfer);
-  void postMessage(any message, optional PostMessageOptions options = {});
-  void start();
-  void close();
+  undefined postMessage(any message, sequence<object> transfer);
+  undefined postMessage(any message, optional PostMessageOptions options = {});
+  undefined start();
+  undefined close();
 
   // event handlers
   attribute EventHandler onmessage;
@@ -77,8 +77,8 @@ dictionary PostMessageOptions {
 interface ServiceWorker : EventTarget {
   readonly attribute USVString scriptURL;
   readonly attribute ServiceWorkerState state;
-  void postMessage(any message, sequence<object> transfer);
-  void postMessage(any message, optional PostMessageOptions options = {});
+  undefined postMessage(any message, sequence<object> transfer);
+  undefined postMessage(any message, optional PostMessageOptions options = {});
 
   // event
   attribute EventHandler onstatechange;

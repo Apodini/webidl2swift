@@ -5,8 +5,8 @@ interface mixin HTMLOrSVGElement {
 
   [CEReactions] attribute boolean autofocus;
   [CEReactions] attribute long tabIndex;
-  void focus(optional FocusOptions options = {});
-  void blur();
+  undefined focus(optional FocusOptions options = {});
+  undefined blur();
 };
 
 dictionary FocusOptions {
