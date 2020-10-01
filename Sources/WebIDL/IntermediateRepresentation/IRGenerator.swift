@@ -195,7 +195,7 @@ public class IRGenerator {
             case .asyncIterable,
                  .readWriteMaplike,
                  .readWriteSetlike:
-                // Not implemented yet.
+                fatalError("Member type \(member) not yet implemented")
                 return nil
             }
         }
