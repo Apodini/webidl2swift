@@ -289,7 +289,7 @@ public class IRGenerator {
 
         case .promiseType(let promise):
             let returnType = handleType(promise.returnType)
-            return ir.registerBasicType(withTypeName: "Promise<\(returnType.identifier)>")
+            return ir.registerBasicType(withTypeName: "JSPromise<\(returnType.identifier), JSError>")
         }
     }
 
