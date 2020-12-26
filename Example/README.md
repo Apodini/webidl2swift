@@ -19,8 +19,9 @@ swiftenv automatically selects the specified version when entering the directory
 
 ## Usage
 
-1. Build `webidl2swift` or run it using `swift run`.
-2. Generate the WebAPI module by running `webidl2swift -i WebIDL-files -o WebAPI`.
-3. Build the website using the Makefile by running `make && make build`.
-4. Start a local webserver, e.g. by running `python3 -m http.server`.
+1. Generate the latest `dom.webidl` by running `npm install; npm run generate-dom`
+2. Build `webidl2swift` or run it using `swift run`.
+3. Generate the WebAPI module by running `webidl2swift -i WebIDL-files -o WebAPI`.
+4. Build the website using the Makefile by running `make && make build`.
+5. Start a local webserver, e.g. by running `python3 -m http.server`.
 
