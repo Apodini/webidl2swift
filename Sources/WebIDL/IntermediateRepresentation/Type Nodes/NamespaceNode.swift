@@ -31,9 +31,9 @@ class NamespaceNode: TypeNode, Equatable {
         var declaration = """
         public enum \(typeName) {
 
-            public static var objectRef: JSObjectRef {
-                return JSObjectRef.global.\(typeName).object!
-            }
+            public static var jsObject: JSObject {
+                return JSObject.global.\(typeName).object!
+            }\n
         """
 
         declaration += members

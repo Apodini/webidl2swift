@@ -44,7 +44,7 @@ class BasicArrayTypeNode: TypeNode, Equatable {
     }
 
     var swiftTypeName: String {
-        typeName
+        "JSTypedArray<\(scalarType)>"
     }
 
     var arrayElementSwiftTypeName: String? {

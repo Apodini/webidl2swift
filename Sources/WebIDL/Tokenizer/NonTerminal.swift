@@ -60,7 +60,6 @@ public enum NonTerminal: String, Equatable, CustomStringConvertible {
     case ArgumentRest = "ArgumentRest"
     case ArgumentName = "ArgumentName"
     case Ellipsis = "Ellipsis"
-    case ReturnType = "ReturnType"
     case Constructor = "Constructor"
     case Stringifier = "Stringifier"
     case StringifierRest = "StringifierRest"

@@ -61,37 +61,35 @@ class DictionaryNode: TypeNode, Equatable {
         let cases = self.cases
 
         return """
-        public struct \(swiftTypeName): ExpressibleByDictionaryLiteral, JSValueCodable {
-
-            public static func canDecode(from jsValue: JSValue) -> Bool {
-                return jsValue.isObject
-            }
+        public struct \(swiftTypeName): ExpressibleByDictionaryLiteral, JSBridgedType {
 
             public enum Key: String, Hashable {
 
                 case \(cases.map(escapedName).joined(separator: ", "))
             }
 
-            public typealias Value = AnyJSValueCodable
+            private let dictionary: [String : JSValue]
 
-            private let dictionary: [String : AnyJSValueCodable]
-
-            public init(uniqueKeysWithValues elements: [(Key, Value)]) {
-                self.dictionary = Dictionary(uniqueKeysWithValues: elements.map({ ($0.0.rawValue, $0.1) }))
+            public init(uniqueKeysWithValues elements: [(Key, JSValueConvertible)]) {
+                self.dictionary = Dictionary(uniqueKeysWithValues: elements.map({ ($0.0.rawValue, $0.1.jsValue()) }))
             }
 
-            public init(dictionaryLiteral elements: (Key, AnyJSValueCodable)...) {
-                self.dictionary = Dictionary(uniqueKeysWithValues: elements.map({ ($0.0.rawValue, $0.1) }))
+            public init(dictionaryLiteral elements: (Key, JSValueConvertible)...) {
+                self.dictionary = Dictionary(uniqueKeysWithValues: elements.map({ ($0.0.rawValue, $0.1.jsValue()) }))
             }
 
-            subscript(_ key: Key) -> AnyJSValueCodable? {
+            subscript(_ key: Key) -> JSValue? {
                 dictionary[key.rawValue]
             }
 
-            public init(jsValue: JSValue) {
-
-                self.dictionary = jsValue.fromJSValue()
+            public init?(from value: JSValue) {
+                if let dictionary: [String : JSValue] = value.fromJSValue() {
+                    self.dictionary = dictionary
+                }
+                return nil
             }
+
+            public var value: JSValue { jsValue() }
 
             public func jsValue() -> JSValue {
                 return dictionary.jsValue()

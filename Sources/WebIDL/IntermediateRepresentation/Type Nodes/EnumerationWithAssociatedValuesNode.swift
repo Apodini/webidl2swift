@@ -95,17 +95,9 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
             }
         }
 
-        let inheritance = ["JSValueEncodable", "JSValueDecodable"] + protocolConfromances.sorted()
+        let inheritance = ["JSBridgedType"] + protocolConfromances.sorted()
 
-        var declaration = """
-            public enum \(typeName): \(inheritance.joined(separator: ", ")) {
-
-                public static func canDecode(from jsValue: JSValue) -> Bool {
-                    return \(cases.map { "\(unwrapNode($0).swiftTypeName).canDecode(from: jsValue)" }.joined(separator: " || "))
-                }
-
-            
-            """
+        var declaration = "public enum \(typeName): \(inheritance.joined(separator: ", ")) {\n"
 
         var initMap = [String]()
         declaration += zip(caseNames, cases)
@@ -114,8 +106,8 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
                 let typeName = unwrapNode(nodePointer).swiftTypeName
 
                 initMap.append("""
-                    if \(typeName).canDecode(from: jsValue) {
-                        self = .\(caseName)(jsValue.fromJSValue())
+                    if let decoded: \(typeName) = value.fromJSValue() {
+                        self = .\(caseName)(decoded)
                     }
                     """)
 
@@ -125,14 +117,14 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
 
         initMap.append("""
             {
-                fatalError()
+                return nil
             }
             """)
 
         declaration += """
 
 
-        public init(jsValue: JSValue) {
+        public init?(from value: JSValue) {
 
         """
         declaration += initMap.joined(separator: " else ")
@@ -143,8 +135,9 @@ class EnumerationWithAssociatedValuesNode: TypeNode, Equatable {
         declaration += "\n\n"
 
         declaration += """
-        public func jsValue() -> JSValue {
+        public var value: JSValue { jsValue() }
 
+        public func jsValue() -> JSValue {
             switch self {
             \(caseNames.map { "case .\($0)(let v): return v.jsValue()" }.joined(separator: "\n"))
             }

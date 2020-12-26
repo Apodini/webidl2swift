@@ -32,11 +32,11 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
 
         if dataTypeNode.isClosure && dataTypeNode.numberOfClosureArguments == 1 {
             return """
-            _\(name) = \(dataTypeNode.isOptional ? "OptionalClosureHandler" : "ClosureHandler")(objectRef: objectRef, name: "\(name)")
+            _\(name) = \(dataTypeNode.isOptional ? "OptionalClosureHandler" : "ClosureHandler")(jsObject: jsObject, name: "\(name)")
             """
         } else if !isOverride {
             return """
-            _\(name) = ReadWriteAttribute(objectRef: objectRef, name: "\(name)")
+            _\(name) = ReadWriteAttribute(jsObject: jsObject, name: "\(name)")
             """
         } else {
             return nil
@@ -49,58 +49,59 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
         let declaration: String
 
         let dataTypeNode = unwrapNode(dataType)
+        let escaped = escapedName(name)
 
         switch (inContext, isStatic) {
         case (.classContext, false) where dataTypeNode.isProtocol:
-            return "public var \(escapedName(name)): \(dataTypeNode.swiftTypeName)"
+            return "public var \(escaped): \(dataTypeNode.swiftTypeName)"
 
         case (.classContext, true) where dataTypeNode.isProtocol:
-        return "public static var \(escapedName(name)): \(dataTypeNode.swiftTypeName)"
+        return "public static var \(escaped): \(dataTypeNode.swiftTypeName)"
 
         case (.classContext, false) where dataTypeNode.isClosure && dataTypeNode.isOptional && dataTypeNode.numberOfClosureArguments == 1:
             declaration = """
             @OptionalClosureHandler
-            public var \(escapedName(name)): \(dataTypeNode.swiftTypeName)
+            public var \(escaped): \(dataTypeNode.swiftTypeName)
             """
 
         case (.classContext, true) where dataTypeNode.isClosure && dataTypeNode.isOptional && dataTypeNode.numberOfClosureArguments == 1:
             declaration = """
-            @OptionalClosureHandler(objectRef: Self.classRef, name: "\(name)")
-            public static var \(escapedName(name)): \(dataTypeNode.swiftTypeName)
+            @OptionalClosureHandler(jsObject: Self.constructor, name: "\(name)")
+            public static var \(escaped): \(dataTypeNode.swiftTypeName)
             """
 
         case (.classContext, false) where dataTypeNode.isClosure && dataTypeNode.numberOfClosureArguments == 1:
             declaration = """
             @ClosureHandler
-            public var \(escapedName(name)): \(dataTypeNode.swiftTypeName)
+            public var \(escaped): \(dataTypeNode.swiftTypeName)
             """
 
         case (.classContext, true) where dataTypeNode.isClosure && dataTypeNode.numberOfClosureArguments == 1:
             declaration = """
-            @ClosureHandler(objectRef: Self.classRef, name: "\(name)")
-            public var \(escapedName(name)): \(dataTypeNode.swiftTypeName)
+            @ClosureHandler(jsObject: Self.constructor, name: "\(name)")
+            public var \(escaped): \(dataTypeNode.swiftTypeName)
             """
 
         case (.classContext, false) where isOverride:
             declaration = """
-            public override var \(escapedName(name)): \(dataTypeNode.swiftTypeName) {
+            public override var \(escaped): \(dataTypeNode.swiftTypeName) {
                 get {
-                    return objectRef[dynamicMember: "\(name)"]
+                    return jsObject.\(escaped)
                 }
                 set {
-                    objectRef[dynamicMember: "\(name)"] = newValue
+                    jsObject.\(escaped) = newValue
                 }
             }
             """
 
         case (.classContext, true) where isOverride:
             declaration = """
-            public static override var \(escapedName(name)): \(dataTypeNode.swiftTypeName) {
+            public static override var \(escaped): \(dataTypeNode.swiftTypeName) {
                 get {
-                    return objectRef[dynamicMember: "\(name)"]
+                    return jsObject.\(escaped)
                 }
                 set {
-                    objectRef[dynamicMember: "\(name)"] = newValue
+                    jsObject\(escaped) = newValue
                 }
             }
             """
@@ -108,17 +109,17 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
         case (.classContext, false):
             declaration = """
             @ReadWriteAttribute
-            public var \(escapedName(name)): \(dataTypeNode.swiftTypeName)
+            public var \(escaped): \(dataTypeNode.swiftTypeName)
             """
 
         case (.classContext, true):
             declaration = """
-            @ReadWriteAttribute(objectRef: Self.classRef, name: "\(name)")
-            public static var \(escapedName(name)): \(dataTypeNode.swiftTypeName)
+            @ReadWriteAttribute(jsObject: Self.constructor, name: "\(name)")
+            public static var \(escaped): \(dataTypeNode.swiftTypeName)
             """
 
         case (.protocolContext, _), (.extensionContext, _), (.structContext, _):
-            declaration = "var \(escapedName(name)): \(dataTypeNode.swiftTypeName)"
+            declaration = "var \(escaped): \(dataTypeNode.swiftTypeName)"
 
         case (.namespaceContext, _):
             fatalError("Not supported by Web IDL standard!")
@@ -137,6 +138,7 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
     func swiftImplementations(inContext: MemberNodeContext) -> [String] {
 
         let dataTypeNode = unwrapNode(dataType)
+        let escaped = escapedName(name)
         switch inContext {
         case .classContext where dataTypeNode.isProtocol,
              .protocolContext where dataTypeNode.isProtocol,
@@ -146,10 +148,10 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
                 _swiftDeclarations(inContext: inContext) + """
                 {
                     get {
-                        return objectRef.\(name).fromJSValue() as \(dataTypeNode.typeErasedSwiftType)
+                        return jsObject.\(escaped).fromJSValue()! as \(dataTypeNode.typeErasedSwiftType)
                     }
                     set {
-                        objectRef.\(name) = newValue.jsValue()
+                        jsObject.\(escaped) = newValue.jsValue()!
                     }
                 }
                 """
@@ -163,23 +165,23 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
              .structContext where dataTypeNode.isOptional && dataTypeNode.isClosure,
              .classContext where dataTypeNode.isOptional && dataTypeNode.isClosure:
             let getterArguments = (0 ..< dataTypeNode.numberOfClosureArguments).map({ "arg\($0)" }).joined(separator: ", ")
-            let setterArguments = (0 ..< dataTypeNode.numberOfClosureArguments).map({ "arguments[\($0)].fromJSValue()" }).joined(separator: ", ")
+            let setterArguments = (0 ..< dataTypeNode.numberOfClosureArguments).map({ "arguments[\($0)].fromJSValue()!" }).joined(separator: ", ")
             return [
                 _swiftDeclarations(inContext: inContext) + """
                  {
                     get {
-                        guard let function = objectRef[dynamicMember: "\(name)"] as JSFunctionRef? else {
+                        guard let function = jsObject.\(escaped).function else {
                             return nil
                         }
-                        return { (\(getterArguments)) in function.dynamicallyCall(withArguments: [\(getterArguments)]).fromJSValue() }
+                        return { (\(getterArguments)) in function(\(getterArguments)).fromJSValue()! }
                     }
                     set {
                         if let newValue = newValue {
-                            objectRef[dynamicMember: "\(name)"] = JSFunctionRef.from({ arguments in
+                            jsObject.\(escaped) = JSClosure { arguments in
                                 return newValue(\(setterArguments)).jsValue()
-                            }).jsValue()
+                            }.jsValue()
                         } else {
-                            objectRef[dynamicMember: "\(name)"] = .null
+                            jsObject.\(escaped) = .null
                         }
                     }
                 }
@@ -191,18 +193,18 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
              .structContext where dataTypeNode.isClosure,
              .classContext:
             let getterArguments = (0 ..< dataTypeNode.numberOfClosureArguments).map({ "arg\($0)" }).joined(separator: ", ")
-            let setterArguments = (0 ..< dataTypeNode.numberOfClosureArguments).map({ "arguments[\($0)].fromJSValue()" }).joined(separator: ", ")
+            let setterArguments = (0 ..< dataTypeNode.numberOfClosureArguments).map({ "arguments[\($0)].fromJSValue()!" }).joined(separator: ", ")
             return [
                 _swiftDeclarations(inContext: inContext) + """
                 {
                     get {
-                        let function = objectRef[dynamicMember: "\(name)"] as JSFunctionRef
-                        return { (\(getterArguments)) in function.dynamicallyCall(withArguments: [\(getterArguments)]).fromJSValue() }
+                        let function = jsObject.\(escaped).function!
+                        return { (\(getterArguments)) in function(\(getterArguments)).fromJSValue()! }
                     }
                     set {
-                        objectRef[dynamicMember: "\(name)"] = JSFunctionRef.from({ arguments in
+                        jsObject.\(escaped) = JSClosure { arguments in
                             return newValue(\(setterArguments)).jsValue()
-                        }).jsValue()
+                        }.jsValue()
                     }
                 }
                 """
@@ -215,10 +217,10 @@ class ReadWritePropertyNode: PropertyNode, Equatable {
                  _swiftDeclarations(inContext: inContext) + """
                   {
                      get {
-                         return objectRef.\(name).fromJSValue()
+                         return jsObject.\(escaped).fromJSValue()!
                      }
                      set {
-                         objectRef.\(name) = newValue.jsValue()
+                         jsObject.\(escaped) = newValue.jsValue()
                      }
                  }
                  """

@@ -240,7 +240,7 @@ public class IntermediateRepresentation: Collection {
     }
 
     @discardableResult
-    func registerProtocol(withTypeName typeName: String, inheritsFrom: Set<NodePointer>, requiredMembers: [MemberNode], defaultImplementations: [MemberNode]) -> NodePointer {
+    func registerProtocol(withTypeName typeName: String, inheritsFrom: Set<NodePointer>, requiredMembers: [MemberNode], defaultImplementations: [MemberNode], kind: ProtocolNode.Kind) -> NodePointer {
 
         let nodePointer = existingOrNewNodePointer(for: typeName)
         let typeErasedPointer = existingOrNewNodePointer(for: "Any\(typeName)")
@@ -252,7 +252,7 @@ public class IntermediateRepresentation: Collection {
             existingProtocolNode.requiredMembers.append(contentsOf: requiredMembers)
             existingProtocolNode.defaultImplementations.append(contentsOf: defaultImplementations)
         } else {
-            nodePointer.node = ProtocolNode(typeName: typeName, inheritsFrom: inheritsFrom, requiredMembers: requiredMembers, defaultImplementations: defaultImplementations)
+            nodePointer.node = ProtocolNode(typeName: typeName, inheritsFrom: inheritsFrom, requiredMembers: requiredMembers, defaultImplementations: defaultImplementations, kind: kind)
             typeErasedPointer.node = TypeErasedWrapperStructNode(wrapped: nodePointer)
         }
 
@@ -265,7 +265,7 @@ public class IntermediateRepresentation: Collection {
         let nodePointer = existingOrNewNodePointer(for: typeName)
         if let alreadyRegisterd = nodePointer.node {
             guard let existingClass = alreadyRegisterd as? ClassNode else {
-                fatalError("Type mismatch for already registered Type!")
+                fatalError("Type mismatch for already registered Type \(typeName): \(type(of: alreadyRegisterd)) -> Class!")
             }
             existingClass.inheritsFrom.formUnion(inheritsFrom)
             existingClass.members.append(contentsOf: members)

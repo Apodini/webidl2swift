@@ -70,21 +70,21 @@ class SubscriptNode: MemberNode, Equatable {
             let lookup: String
             declaration += " {\n"
             if isNamed {
-                lookup = "objectRef[dynamicMember: \(nameParameter.label)]"
+                lookup = "jsObject.\(escapedName(nameParameter.label))"
             } else {
-                lookup = "objectRef[\(nameParameter.label)]"
+                lookup = "jsObject[\(nameParameter.label)]"
             }
 
             if returnTypeNode.isProtocol {
                 declaration += """
                 get {
-                    return \(lookup).fromJSValue() as \(returnTypeNode.typeErasedSwiftType)
+                    return \(lookup).fromJSValue()! as \(returnTypeNode.typeErasedSwiftType)
                 }
                 """
             } else {
                 declaration += """
                 get {
-                    return \(lookup).fromJSValue()
+                    return \(lookup).fromJSValue()!
                 }
                 """
             }

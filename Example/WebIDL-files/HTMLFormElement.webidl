@@ -22,9 +22,9 @@ interface HTMLFormElement : HTMLElement {
   getter Element (unsigned long index);
   getter (RadioNodeList or Element) (DOMString name);
 
-  void submit();
-  void requestSubmit(optional HTMLElement? submitter = null);
-  [CEReactions] void reset();
+  undefined submit();
+  undefined requestSubmit(optional HTMLElement? submitter = null);
+  [CEReactions] undefined reset();
   boolean checkValidity();
   boolean reportValidity();
 };
@@ -41,7 +41,7 @@ interface HTMLElement : Element {
 
   // user interaction
   [CEReactions] attribute boolean hidden;
-  void click();
+  undefined click();
   [CEReactions] attribute DOMString accessKey;
   readonly attribute DOMString accessKeyLabel;
   [CEReactions] attribute boolean draggable;
@@ -76,12 +76,12 @@ interface RadioNodeList : NodeList {
 interface ElementInternals {
   // Form-associated custom elements
 
-  void setFormValue((File or USVString or FormData)? value,
+  undefined setFormValue((File or USVString or FormData)? value,
                     optional (File or USVString or FormData)? state);
 
   readonly attribute HTMLFormElement? form;
 
-  void setValidity(ValidityStateFlags flags,
+  undefined setValidity(ValidityStateFlags flags,
                    optional DOMString message,
                    optional HTMLElement anchor);
   readonly attribute boolean willValidate;
