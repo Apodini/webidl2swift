@@ -9,10 +9,10 @@ interface MediaSource : EventTarget {
                     attribute EventHandler        onsourceended;
                     attribute EventHandler        onsourceclose;
     SourceBuffer   addSourceBuffer (DOMString type);
-    void           removeSourceBuffer (SourceBuffer sourceBuffer);
-    void           endOfStream (optional EndOfStreamError error);
-    void           setLiveSeekableRange (double start, double end);
-    void           clearLiveSeekableRange ();
+    undefined           removeSourceBuffer (SourceBuffer sourceBuffer);
+    undefined           endOfStream (optional EndOfStreamError error);
+    undefined           setLiveSeekableRange (double start, double end);
+    undefined           clearLiveSeekableRange ();
     static boolean isTypeSupported (DOMString type);
 };
 
@@ -51,9 +51,9 @@ interface SourceBuffer : EventTarget {
                     attribute EventHandler        onupdateend;
                     attribute EventHandler        onerror;
                     attribute EventHandler        onabort;
-    void appendBuffer (BufferSource data);
-    void abort ();
-    void remove (double start, unrestricted double end);
+    undefined appendBuffer (BufferSource data);
+    undefined abort ();
+    undefined remove (double start, unrestricted double end);
 };
 
 [Exposed=Window]
@@ -135,8 +135,8 @@ interface TextTrack : EventTarget {
   readonly attribute TextTrackCueList? cues;
   readonly attribute TextTrackCueList? activeCues;
 
-  void addCue(TextTrackCue cue);
-  void removeCue(TextTrackCue cue);
+  undefined addCue(TextTrackCue cue);
+  undefined removeCue(TextTrackCue cue);
 
   attribute EventHandler oncuechange;
 };

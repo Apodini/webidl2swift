@@ -82,7 +82,8 @@ public enum Terminal: String, Equatable, CustomStringConvertible {
     case unsigned = "unsigned"
     case short = "short"
     case long = "long"
-    case void = "void"
+    case void = "void" // deprecated
+    case undefined = "undefined"
 
     case ArrayBuffer = "ArrayBuffer"
     case DataView = "DataView"

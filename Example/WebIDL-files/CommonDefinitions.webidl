@@ -44,4 +44,4 @@ typedef unsigned long long DOMTimeStamp;
 
 callback Function = any (any... arguments);
 
-callback VoidFunction = void ();
+callback VoidFunction = undefined ();

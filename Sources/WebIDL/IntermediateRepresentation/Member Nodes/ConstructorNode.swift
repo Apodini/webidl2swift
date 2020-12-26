@@ -107,23 +107,23 @@ class ConstructorNode: MemberNode, Equatable {
 
                         let returnValue: String
                         if closureNode.returnType.identifier == "Void" {
-                            returnValue = "; return .undefined"
+                            returnValue = ""
                         } else {
-                            returnValue = ".fromJSValue()"
+                            returnValue = ".fromJSValue()!"
                         }
 
                         let argumentCount = closureNode.arguments.count
                         let closureArguments = (0 ..< argumentCount)
-                            .map { "$0[\($0)].fromJSValue()" }
+                            .map { "$0[\($0)].fromJSValue()!" }
                             .joined(separator: ", ")
-                        return "JSFunctionRef.from({ \($0.label)(\(closureArguments))\(returnValue) })"
+                        return "JSClosure { \($0.label)(\(closureArguments))\(returnValue) }"
                     } else {
                         return $0.label + ".jsValue()"
                     }
                 }
                 declaration += """
                  {
-                    self.init(objectRef: \(className).classRef.new(\(passedParameters.joined(separator: ", "))))
+                    self.init(unsafelyWrapping: \(className).constructor.new(\(passedParameters.joined(separator: ", "))))
                 }
                 """
             }

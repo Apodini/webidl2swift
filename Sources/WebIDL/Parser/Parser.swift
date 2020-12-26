@@ -484,7 +484,7 @@ public class Parser {
 
         let identifier = try parseIdentifier()
         try expect(next: .terminal(.equalSign))
-        let returnType = try parseReturnType()
+        let returnType = try parseType()
         try expect(next: .terminal(.openingParenthesis))
         let argumentList = try parseArgumentList()
         try expect(next: .terminal(.closingParenthesis))
@@ -716,10 +716,10 @@ public class Parser {
 
         /*
          RegularOperation ::
-         ReturnType OperationRest
+         Type OperationRest
          */
 
-        let returnType = try parseReturnType()
+        let returnType = try parseType()
         let operationRest = try parseOperationRest()
 
         return RegularOperation(returnType: returnType, operationName: operationRest.optioalOperationName, argumentList: operationRest.argumentList)
@@ -982,18 +982,27 @@ public class Parser {
 
         /*
          AsyncIterable ::
-         async iterable < TypeWithExtendedAttributes , TypeWithExtendedAttributes > ;
+         async iterable < TypeWithExtendedAttributes OptionalType > OptionalArgumentList;
          */
         try expect(next: .terminal(.async))
         try expect(next: .terminal(.iterable))
         try expect(next: .terminal(.openingAngleBracket))
-        let typeWithExtendedAttributes0 = try parseTypeWithExtendedAttributes()
-        try expect(next: .terminal(.comma))
-        let typeWithExtendedAttribute1 = try parseTypeWithExtendedAttributes()
+        let typeWithExtendedAttributes = try parseTypeWithExtendedAttributes()
+        let optionalType = try parseOptionalType()
         try expect(next: .terminal(.closingAngleBracket))
+        let optionalArgumentList = try parseOptionalArgumentList()
         try expect(next: .terminal(.semicolon))
 
-        return AsyncIterable(typeWithExtendedAttributes0: typeWithExtendedAttributes0, typeWithExtendedAttributes1: typeWithExtendedAttribute1)
+        return AsyncIterable(typeWithExtendedAttributes0: typeWithExtendedAttributes, typeWithExtendedAttributes1: optionalType, argumentList: optionalArgumentList)
+    }
+
+    func parseOptionalArgumentList() throws -> [Argument]? {
+        guard check(forNext: .terminal(.openingParenthesis)) else {
+            return nil
+        }
+        let argumentList = try parseArgumentList()
+        try expect(next: .terminal(.closingParenthesis))
+        return argumentList
     }
 
     func parseReadOnlyMember(extendedAttributeList: ExtendedAttributeList) throws -> InterfaceMember {
@@ -1055,7 +1064,7 @@ public class Parser {
         try expect(next: .terminal(.closingAngleBracket))
         try expect(next: .terminal(.semicolon))
 
-        return SetlikeRest(dataType: typeWithExtendedAttributes)
+        return SetlikeRest(elementType: typeWithExtendedAttributes)
     }
 
     func parseReadWriteAttribute(extendedAttributeList: ExtendedAttributeList) throws -> InterfaceMember {
@@ -1497,7 +1506,7 @@ public class Parser {
             return DictionaryMember(identifier: identifier,
                                     isRequired: true,
                                     extendedAttributeList: extendedAttributeList,
-                                    dataType: typeWithExtendedAttributes.dataType,
+                                    type: typeWithExtendedAttributes.type,
                                     extendedAttributesOfDataType: typeWithExtendedAttributes.extendedAttributeList,
                                     defaultValue: nil)
 
@@ -1509,7 +1518,7 @@ public class Parser {
             return DictionaryMember(identifier: identifier,
                                     isRequired: false,
                                     extendedAttributeList: extendedAttributeList,
-                                    dataType: dataType,
+                                    type: dataType,
                                     extendedAttributesOfDataType: nil,
                                     defaultValue: defaultValue)
 
@@ -1585,7 +1594,7 @@ public class Parser {
         let identifier = try parseIdentifier()
         try expect(next: .terminal(.semicolon))
 
-        return Typedef(identifier: identifier, dataType: typeWithExtendedAttributes.dataType, extendedAttributeList: typeWithExtendedAttributes.extendedAttributeList)
+        return Typedef(identifier: identifier, type: typeWithExtendedAttributes.type, extendedAttributeList: typeWithExtendedAttributes.extendedAttributeList)
     }
 
     func parseTypeWithExtendedAttributes() throws -> TypeWithExtendedAttributes {
@@ -1597,10 +1606,10 @@ public class Parser {
 
         let extendedAttributeList = try parseExtendedAttributeList()
         let dataType = try parseType()
-        return .init(dataType: dataType, extendedAttributeList: extendedAttributeList)
+        return .init(type: dataType, extendedAttributeList: extendedAttributeList)
     }
 
-    func parseType() throws -> DataType {
+    func parseType() throws -> Type {
 
         /*
          Type ::
@@ -1626,6 +1635,8 @@ public class Parser {
          SingleType ::
          DistinguishableType
          any
+         undefined
+         void [removed from most recent spec]
          PromiseType
          */
 
@@ -1637,6 +1648,10 @@ public class Parser {
         case .terminal(.any):
             tokens.removeFirst()
             return .any
+
+        case .terminal(.undefined), .terminal(.void):
+            tokens.removeFirst()
+            return .undefined
 
         case let token where firstSet(for: .PromiseType).contains(token):
             let promise = try parsePromiseType()
@@ -1934,29 +1949,17 @@ public class Parser {
     func parsePromiseType() throws -> Promise {
         /*
          PromiseType ::
-         Promise < ReturnType >
+         Promise < Type >
          */
 
         try expect(next: .terminal(.promise))
         try expect(next: .terminal(.openingAngleBracket))
-        let returnType = try parseReturnType()
+        let returnType = try parseType()
         try expect(next: .terminal(.closingAngleBracket))
 
         return Promise(returnType: returnType)
     }
 
-    func parseReturnType() throws -> ReturnType {
-        /*
-         ReturnType ::
-         Type
-         void
-         */
-        if check(forNext: .terminal(.void)) {
-            return .void
-        } else {
-            return .dataType(try parseType())
-        }
-    }
 
     func parseRecordType() throws -> RecordType {
         /*
@@ -2268,7 +2271,7 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
         )
 
     case .RegularOperation:
-        return firstSet(for: .ReturnType)
+        return firstSet(for: .Type)
 
     case .SpecialOperation:
         return firstSet(for: .Special)
@@ -2324,12 +2327,6 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
 
     case .Ellipsis:
         return [.terminal(.ellipsis)]
-
-    case .ReturnType:
-        return union(
-            firstSet(for: .Type),
-            [.terminal(.void)]
-        )
 
     case .Constructor:
         return [.terminal(.constructor)]
@@ -2448,7 +2445,7 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
     case .SingleType:
         return union(
             firstSet(for: .DistinguishableType),
-            [.terminal(.any)],
+            [.terminal(.any), .terminal(.undefined), .terminal(.void)],
             firstSet(for: .PromiseType)
         )
 
@@ -2618,7 +2615,6 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
             .terminal(.symbol),
             .terminal(.true),
             .terminal(.unsigned),
-            .terminal(.void),
         ]
         return union(
             terminals,

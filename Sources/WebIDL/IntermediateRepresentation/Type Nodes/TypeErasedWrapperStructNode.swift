@@ -28,12 +28,14 @@ class TypeErasedWrapperStructNode: TypeNode, Equatable {
         // swiftlint:enable force_cast
 
         var declaration = """
-        class \(swiftTypeName): JSBridgedType, \(unwrapNode(wrapped).swiftTypeName) {
+        class \(swiftTypeName): JSBridgedClass, \(unwrapNode(wrapped).swiftTypeName) {
 
-            let objectRef: JSObjectRef
+            public class var constructor: JSFunction { JSObject.global.\(wrapped.identifier).function! }
 
-            required init(objectRef: JSObjectRef) {
-                self.objectRef = objectRef
+            let jsObject: JSObject
+
+            required init(unsafelyWrapping jsObject: JSObject) {
+                self.jsObject = jsObject
             }
 
         """

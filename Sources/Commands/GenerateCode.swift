@@ -74,7 +74,7 @@ public struct GenerateCode: ParsableCommand {
 
         guard undefinedTypes.isEmpty else {
             print("Error: The following types are undefined:")
-            print(undefinedTypes.map { "\t- \($0.0)" }.joined(separator: "\n"))
+            print(undefinedTypes.map { "\t- \($0.0)" }.sorted().joined(separator: "\n"))
             Self.exit(withError: ExitCode.failure)
         }
 
@@ -85,7 +85,6 @@ public struct GenerateCode: ParsableCommand {
          */
 
         import JavaScriptKit
-        import ECMAScript
 
 
         """

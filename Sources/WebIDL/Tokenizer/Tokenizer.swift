@@ -110,7 +110,7 @@ public enum Tokenizer {
         guard let string = String(data: fileData, encoding: .utf8) else {
             return nil
         }
-        return try tokenize(string)
+        return try tokenize(string, name: fileURL.lastPathComponent)
     }
 
     // swiftlint:disable cyclomatic_complexity function_body_length
@@ -118,7 +118,7 @@ public enum Tokenizer {
     /// - Parameter string: A string containing Web IDL definitions.
     /// - Throws: Any error related to the file operations or the tokenization operation.
     /// - Returns: A `TokenisationResult` instance containing the token stream for the given file.
-    public static func tokenize(_ string: String) throws -> TokenisationResult {
+    public static func tokenize(_ string: String, name: String = "<unknown>") throws -> TokenisationResult {
 
         var tokens = Tokens()
 
@@ -179,7 +179,7 @@ public enum Tokenizer {
                 tokens.append(.other)
                 others.append(buffer)
             } else {
-                print("Undefined sequence: \(buffer)")
+                print("[\(name)] Undefined sequence: \(buffer)")
             }
             reset()
         }
