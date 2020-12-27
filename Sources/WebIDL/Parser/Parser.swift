@@ -1809,6 +1809,7 @@ public class Parser {
          PrimitiveType ::
          UnsignedIntegerType
          UnrestrictedFloatType
+         undefined
          boolean
          byte
          octet
@@ -1820,6 +1821,10 @@ public class Parser {
 
         case let token where firstSet(for: .UnrestrictedFloatType).contains(token):
             return .UnrestrictedFloatType(try parseUnrestrictedFloatType())
+
+        case .terminal(.undefined):
+            tokens.removeFirst()
+            return .undefined
 
         case .terminal(.boolean):
             tokens.removeFirst()
@@ -2474,6 +2479,7 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
 
     case .PrimitiveType:
         let terminals: Set<Token> = [
+            .terminal(.undefined),
             .terminal(.boolean),
             .terminal(.byte),
             .terminal(.octet),

@@ -358,6 +358,7 @@ public enum StringType: String, Equatable, Hashable {
 public enum PrimitiveType: Equatable {
     case UnsignedIntegerType(UnsignedIntegerType)
     case UnrestrictedFloatType(UnrestrictedFloatType)
+    case undefined
     case boolean
     case byte
     case octet

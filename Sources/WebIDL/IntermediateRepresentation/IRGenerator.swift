@@ -417,6 +417,8 @@ public class IRGenerator {
             return ir.registerBasicType(withTypeName: "Int8")
         case .octet:
             return ir.registerBasicType(withTypeName: "UInt8")
+        case .undefined:
+            return ir.registerBasicType(withTypeName: "Void")
         }
     }
 
