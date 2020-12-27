@@ -70,11 +70,11 @@ class DictionaryNode: TypeNode, Equatable {
 
             private let dictionary: [String : JSValue]
 
-            public init(uniqueKeysWithValues elements: [(Key, JSValueConvertible)]) {
+            public init(uniqueKeysWithValues elements: [(Key, ConvertibleToJSValue)]) {
                 self.dictionary = Dictionary(uniqueKeysWithValues: elements.map({ ($0.0.rawValue, $0.1.jsValue()) }))
             }
 
-            public init(dictionaryLiteral elements: (Key, JSValueConvertible)...) {
+            public init(dictionaryLiteral elements: (Key, ConvertibleToJSValue)...) {
                 self.dictionary = Dictionary(uniqueKeysWithValues: elements.map({ ($0.0.rawValue, $0.1.jsValue()) }))
             }
 

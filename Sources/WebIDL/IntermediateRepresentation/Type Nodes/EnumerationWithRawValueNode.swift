@@ -35,7 +35,7 @@ class EnumerationWithRawValueNode: TypeNode, Equatable {
         }
 
         var declaration = """
-        public enum \(typeName): String, JSValueCodable {
+        public enum \(typeName): String, JSValueCompatible {
 
             public static func construct(from jsValue: JSValue) -> \(typeName)? {
                 if let string = jsValue.string,

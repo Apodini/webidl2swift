@@ -19,19 +19,19 @@ public struct GenerateCode: ParsableCommand {
 
     /// The path to the output directory.
     @Option(name: .shortAndLong, help: "The path to the output directory.")
-    public var ouputDirectory: String
+    public var outputDirectory: String
 
     /// Create a file for each definition.
-    @Flag(name: .long, default: true, inversion: .prefixedNo, help: "Create a file for each definition.")
-    public var createSeparateFiles: Bool
+    @Flag(name: .long, inversion: .prefixedNo, help: "Create a file for each definition.")
+    public var createSeparateFiles: Bool = true
 
     /// Print verbose output.
     @Flag(help: "Print verbose output.")
-    public var verbose: Bool
+    public var verbose: Bool = false
 
     /// Run swift-format over output.
-    @Flag(name: .long, default: true, inversion: .prefixedNo, help: "Run swift-format over output.")
-    public var prettyPrint: Bool
+    @Flag(name: .long, inversion: .prefixedNo, help: "Run swift-format over output.")
+    public var prettyPrint: Bool = true
 
     /// Initialize a `GenerateCode` instance
     public init() {}
@@ -42,7 +42,7 @@ public struct GenerateCode: ParsableCommand {
 
         if verbose {
             print("inputDirectory: \(inputDirectory)")
-            print("ouputDirectory: \(ouputDirectory)")
+            print("outputDirectory: \(outputDirectory)")
             print("createSeparateFiles: \(createSeparateFiles)")
         }
 
@@ -50,6 +50,7 @@ public struct GenerateCode: ParsableCommand {
             print("Error tokenizing input files.")
             Self.exit(withError: ExitCode.failure)
         }
+        print("files tokenized successfully")
 
         let parser = Parser(input: tokenisationResult)
         let definitions: [Definition]
@@ -89,8 +90,8 @@ public struct GenerateCode: ParsableCommand {
 
         """
 
-        let packageDirectory = URL(fileURLWithPath: ouputDirectory).appendingPathComponent("WebAPI")
-        let sourcesDirectory = packageDirectory.appendingPathComponent("Sources").appendingPathComponent("WebAPI")
+        let packageDirectory = URL(fileURLWithPath: outputDirectory).appendingPathComponent("WebIDL")
+        let sourcesDirectory = packageDirectory.appendingPathComponent("Sources").appendingPathComponent("WebIDL")
 
         let fileManager = FileManager.default
 
