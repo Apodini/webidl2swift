@@ -16,7 +16,7 @@
     "webpack-dev-server": "^3.10.3"
   },
   "scripts": {
-    "generate-dom": "node get-dom-webidl.js",
+    "generate-webidl": "node get-webidl.js dom; node get-webidl.js html",
     "build": "webpack",
     "start": "webpack-dev-server"
   },
