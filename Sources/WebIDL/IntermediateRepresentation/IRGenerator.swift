@@ -284,8 +284,6 @@ public class IRGenerator {
 
         case .any:
             return ir.registerBasicType(withTypeName: "JSValue")
-        case .undefined:
-            return ir.registerBasicType(withTypeName: "Void")
 
         case .promiseType(let promise):
             let returnType = handleType(promise.returnType)

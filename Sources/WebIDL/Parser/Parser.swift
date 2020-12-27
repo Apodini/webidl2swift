@@ -1635,7 +1635,6 @@ public class Parser {
          SingleType ::
          DistinguishableType
          any
-         undefined
          void [removed from most recent spec]
          PromiseType
          */
@@ -1648,10 +1647,6 @@ public class Parser {
         case .terminal(.any):
             tokens.removeFirst()
             return .any
-
-        case .terminal(.undefined), .terminal(.void):
-            tokens.removeFirst()
-            return .undefined
 
         case let token where firstSet(for: .PromiseType).contains(token):
             let promise = try parsePromiseType()
@@ -1810,6 +1805,7 @@ public class Parser {
          UnsignedIntegerType
          UnrestrictedFloatType
          undefined
+         void [deprecated]
          boolean
          byte
          octet
@@ -1822,7 +1818,7 @@ public class Parser {
         case let token where firstSet(for: .UnrestrictedFloatType).contains(token):
             return .UnrestrictedFloatType(try parseUnrestrictedFloatType())
 
-        case .terminal(.undefined):
+        case .terminal(.undefined), .terminal(.void):
             tokens.removeFirst()
             return .undefined
 
@@ -2450,7 +2446,7 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
     case .SingleType:
         return union(
             firstSet(for: .DistinguishableType),
-            [.terminal(.any), .terminal(.undefined), .terminal(.void)],
+            [.terminal(.any)],
             firstSet(for: .PromiseType)
         )
 

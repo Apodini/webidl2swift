@@ -171,7 +171,7 @@ final class ParserTests: XCTestCase {
 
         XCTAssertEqual(definitions as! [CallbackInterface], [
             CallbackInterface(identifer: "A", extendedAttributeList: [], callbackInterfaceMembers: [
-                .regularOperation(.init(returnType: .single(.undefined), operationName: .identifier("handle"), argumentList: [.init(rest: .nonOptional(.single(.any), true, .identifier("data")), extendedAttributeList: [])]), [])
+                .regularOperation(.init(returnType: .single(.distinguishableType(.primitive(.undefined, false))), operationName: .identifier("handle"), argumentList: [.init(rest: .nonOptional(.single(.any), true, .identifier("data")), extendedAttributeList: [])]), [])
             ])
         ])
     }
@@ -185,7 +185,7 @@ final class ParserTests: XCTestCase {
         let definitions = try parser.parse()
 
         XCTAssertEqual(definitions as! [Callback], [
-            Callback(identifier: "CallbackHandler", extendedAttributeList: [], returnType: .single(.undefined), argumentList: [])
+            Callback(identifier: "CallbackHandler", extendedAttributeList: [], returnType: .single(.distinguishableType(.primitive(.undefined, false))), argumentList: [])
         ])
     }
 }

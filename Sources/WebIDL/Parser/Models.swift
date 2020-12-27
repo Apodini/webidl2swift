@@ -285,7 +285,6 @@ public indirect enum SingleType: Equatable {
 
     case distinguishableType(DistinguishableType)
     case any
-    case undefined
     case promiseType(Promise)
 }
 
