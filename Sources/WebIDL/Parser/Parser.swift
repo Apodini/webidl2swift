@@ -2475,6 +2475,7 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
 
     case .PrimitiveType:
         let terminals: Set<Token> = [
+            .terminal(.void),
             .terminal(.undefined),
             .terminal(.boolean),
             .terminal(.byte),
