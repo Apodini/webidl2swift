@@ -9,11 +9,14 @@
     "javascript-kit-swift": "file:./HelloWorld/.build/checkouts/JavaScriptKit/Runtime"
   },
   "devDependencies": {
+    "cheerio": "1.0.0-rc.5",
+    "node-fetch": "^2.6.1",
     "webpack": "^4.42.0",
     "webpack-cli": "^3.3.11",
     "webpack-dev-server": "^3.10.3"
   },
   "scripts": {
+    "generate-webidl": "node get-webidl.js dom; node get-webidl.js html",
     "build": "webpack",
     "start": "webpack-dev-server"
   },

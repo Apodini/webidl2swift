@@ -284,8 +284,6 @@ public class IRGenerator {
 
         case .any:
             return ir.registerBasicType(withTypeName: "JSValue")
-        case .undefined:
-            return ir.registerBasicType(withTypeName: "Void")
 
         case .promiseType(let promise):
             let returnType = handleType(promise.returnType)
@@ -417,6 +415,8 @@ public class IRGenerator {
             return ir.registerBasicType(withTypeName: "Int8")
         case .octet:
             return ir.registerBasicType(withTypeName: "UInt8")
+        case .undefined:
+            return ir.registerBasicType(withTypeName: "Void")
         }
     }
 
