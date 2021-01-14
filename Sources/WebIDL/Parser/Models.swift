@@ -85,6 +85,7 @@ public enum InterfaceMember: Equatable {
     case readWriteAttribute(ReadWriteAttribute, ExtendedAttributeList)
     case readWriteMaplike(ReadWriteMaplike, ExtendedAttributeList)
     case readWriteSetlike(ReadWriteSetlike, ExtendedAttributeList)
+    case typedef(Typedef)
 }
 
 public enum StaticMember: Equatable {

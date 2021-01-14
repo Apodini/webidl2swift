@@ -192,6 +192,10 @@ public class IRGenerator {
             case .iterable(let iterable, _):
                 return handleIterable(iterable)
 
+            case .typedef(let typedef):
+                handleTypedef(typedef)
+                return nil
+
             case .asyncIterable,
                  .readWriteMaplike,
                  .readWriteSetlike:

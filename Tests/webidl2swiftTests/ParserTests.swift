@@ -52,6 +52,8 @@ final class ParserTests: XCTestCase {
 
             const float a = 42.0;
             const unrestricted double b = 42.23;
+
+            typedef (ArrayBuffer or ArrayBufferView) BufferDataSource;
         };
 
         [Exposed=Window]
@@ -65,6 +67,15 @@ final class ParserTests: XCTestCase {
                 .constructor([], []),
                 .const(.init(identifier: "a", constType: .primitiveType(.UnrestrictedFloatType(.restricted(.float))), constValue: .floatLiteral(.decimal(42))), []),
                 .const(.init(identifier: "b", constType: .primitiveType(.UnrestrictedFloatType(.unrestricted(.double))), constValue: .floatLiteral(.decimal(42.23))), []),
+                .typedef(
+                    .init(
+                        identifier: "BufferDataSource",
+                        type: .union(
+                            [.distinguishableType([], .bufferRelated(.ArrayBuffer, false)),
+                             .distinguishableType([], .identifier("ArrayBufferView", false))], false),
+                        extendedAttributeList: []
+                    )
+                )
             ]),
             Interface(identifier: "B", extendedAttributeList: [.identifier("Exposed", "Window")], inheritance: .init(identifier: "A"), members: [])
         ])
