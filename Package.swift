@@ -35,7 +35,9 @@ let package = Package(
         ),
         .target(
             name: "WebIDL",
-            dependencies: [],
+            dependencies: [
+                "SwiftSyntax"
+            ],
             path: "Sources/WebIDL"
         ),
         .target(
@@ -43,7 +45,7 @@ let package = Package(
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "SwiftFormat", package: "swift-format"),
-                .product(name: "SwiftSyntax", package: "SwiftSyntax"),
+                "SwiftSyntax",
                 .target(name: "WebIDL"),
             ],
             // Ran into linker issues: GenerateCode was not usable in tests when it is declared in webidl2swift

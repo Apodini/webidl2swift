@@ -208,7 +208,9 @@ public enum Tokenizer {
                 as: UTF8.self
         ).first {
             defer {
-                currentOffset += 1
+                if currentOffset < string.utf8.count - 1 {
+                    currentOffset += 1
+                }
                 currentIndex = string.utf8.index(after: currentIndex)
             }
 
