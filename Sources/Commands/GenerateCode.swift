@@ -46,13 +46,13 @@ public struct GenerateCode: ParsableCommand {
             print("createSeparateFiles: \(createSeparateFiles)")
         }
 
-        guard let TokenizationResult = try Tokenizer.tokenize(filesInDirectoryAt: URL(fileURLWithPath: inputDirectory)) else {
+        guard let tokenizationResult = try Tokenizer.tokenize(filesInDirectoryAt: URL(fileURLWithPath: inputDirectory)) else {
             print("Error tokenizing input files.")
             Self.exit(withError: ExitCode.failure)
         }
         print("files tokenized successfully")
 
-        let parser = Parser(input: TokenizationResult)
+        let parser = Parser(input: tokenizationResult)
         let definitions: [Definition]
         do {
             definitions = try parser.parse()
