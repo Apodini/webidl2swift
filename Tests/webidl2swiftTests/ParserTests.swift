@@ -81,6 +81,7 @@ final class ParserTests: XCTestCase {
         ])
     }
 
+    // swiftlint:disable function_body_length
     func test_parseMixinTypedef() throws {
         let result = try Tokenizer.tokenize("""
         interface mixin WebGLRenderingContextBase
@@ -170,6 +171,7 @@ final class ParserTests: XCTestCase {
             )
         )
     }
+    // swiftlint:enable function_body_length
 
     func test_parseNamespace() throws {
         let result = try Tokenizer.tokenize("""
