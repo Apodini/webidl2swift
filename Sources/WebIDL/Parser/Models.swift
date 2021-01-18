@@ -66,6 +66,7 @@ public enum MixinMember: Equatable {
     case regularOperation(RegularOperation, ExtendedAttributeList)
     case stringifier(Stringifier, ExtendedAttributeList)
     case readOnlyAttributeRest(Bool, AttributeRest, ExtendedAttributeList)
+    case typedef(Typedef)
 }
 
 public struct Inheritance: Equatable {

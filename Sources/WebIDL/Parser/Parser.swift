@@ -595,6 +595,9 @@ public class Parser {
         case let token where union(firstSet(for: .ReadOnly), firstSet(for: .AttributeRest)).contains(token):
             return .readOnlyAttributeRest(try parseReadOnly(), try parseAttributeRest(), extendedAttributeList)
 
+        case let token where firstSet(for: .Typedef).contains(token):
+            return .typedef(try parseTypedef(extendedAttributeList: extendedAttributeList))
+
         default:
             try unexpected(token)
         }
@@ -2218,7 +2221,8 @@ func firstSet(for symbol: NonTerminal) -> Set<Token.Kind> {
             firstSet(for: .RegularOperation),
             firstSet(for: .Stringifier),
             firstSet(for: .ReadOnly),
-            firstSet(for: .AttributeRest)
+            firstSet(for: .AttributeRest),
+            firstSet(for: .Typedef)
         )
 
     case .IncludesStatement:
