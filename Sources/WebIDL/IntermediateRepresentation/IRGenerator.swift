@@ -134,6 +134,10 @@ public class IRGenerator {
                 let type = handleType(attributeRest.typeWithExtendedAttributes.type)
                 let name = handleAttributeName(attributeRest.attributeName)
                 return ReadonlyPropertyNode(name: name, dataType: type, isStatic: false)
+
+            case .typedef(let typedef):
+                handleTypedef(typedef)
+                return nil
             }
         }
 
@@ -191,6 +195,10 @@ public class IRGenerator {
 
             case .iterable(let iterable, _):
                 return handleIterable(iterable)
+
+            case .typedef(let typedef):
+                handleTypedef(typedef)
+                return nil
 
             case .asyncIterable,
                  .readWriteMaplike,

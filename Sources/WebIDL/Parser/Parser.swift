@@ -23,7 +23,7 @@ public class Parser {
             case .unexpectedToken(let token):
                 return "Encountered unexpected token \(token)"
             case .incorrectToken(let expected, let got):
-                return "Encountered enexpected token \(got), but expected \(expected)"
+                return "Encountered unexpected token \(got), but expected \(expected)"
             }
         }
     }
@@ -595,6 +595,9 @@ public class Parser {
         case let token where union(firstSet(for: .ReadOnly), firstSet(for: .AttributeRest)).contains(token):
             return .readOnlyAttributeRest(try parseReadOnly(), try parseAttributeRest(), extendedAttributeList)
 
+        case let token where firstSet(for: .Typedef).contains(token):
+            return .typedef(try parseTypedef(extendedAttributeList: extendedAttributeList))
+
         default:
             try unexpected(token)
         }
@@ -666,6 +669,7 @@ public class Parser {
          ReadWriteAttribute
          ReadWriteMaplike
          ReadWriteSetlike
+         Typedef
          */
         let token = try unwrap(tokens.first)
         switch token.kind {
@@ -698,6 +702,9 @@ public class Parser {
 
         case let token where firstSet(for: .ReadWriteSetlike).contains(token):
             return .readWriteSetlike(try parseReadWriteSetlike(), extendedAttributeList)
+
+        case let token where firstSet(for: .Typedef).contains(token):
+            return .typedef(try parseTypedef(extendedAttributeList: extendedAttributeList))
 
         default:
             try unexpected(token)
@@ -1618,7 +1625,7 @@ public class Parser {
         return try [EnumValue(string: strings.removeFirst())] + parseEnumValueListComma()
     }
 
-    func parseTypedef(extendedAttributeList: ExtendedAttributeList) throws -> Definition {
+    func parseTypedef(extendedAttributeList: ExtendedAttributeList) throws -> Typedef {
         /*
          Typedef ::
          typedef TypeWithExtendedAttributes identifier ;
@@ -2189,7 +2196,8 @@ func firstSet(for symbol: NonTerminal) -> Set<Token.Kind> {
             firstSet(for: .ReadOnlyMember),
             firstSet(for: .ReadWriteAttribute),
             firstSet(for: .ReadWriteMaplike),
-            firstSet(for: .ReadWriteSetlike)
+            firstSet(for: .ReadWriteSetlike),
+            firstSet(for: .Typedef)
         )
 
     case .Inheritance:
@@ -2213,7 +2221,8 @@ func firstSet(for symbol: NonTerminal) -> Set<Token.Kind> {
             firstSet(for: .RegularOperation),
             firstSet(for: .Stringifier),
             firstSet(for: .ReadOnly),
-            firstSet(for: .AttributeRest)
+            firstSet(for: .AttributeRest),
+            firstSet(for: .Typedef)
         )
 
     case .IncludesStatement:
