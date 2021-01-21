@@ -2,12 +2,15 @@
 //  Created by Manuel Burghard. Licensed unter MIT.
 //
 
+// swiftlint:disable file_length
+
 import Foundation
+import SwiftSyntax
 
 ///
 public typealias Tokens = [Token]
 
-public struct TokenisationResult: CustomStringConvertible {
+public struct TokenizationResult: CustomStringConvertible {
 
     public let tokens: Tokens
     public let identifiers: [String]
@@ -16,9 +19,9 @@ public struct TokenisationResult: CustomStringConvertible {
     public let strings: [String]
     public let others: [String]
 
-    func merging(_ other: TokenisationResult) -> TokenisationResult {
+    func merging(_ other: TokenizationResult) -> TokenizationResult {
 
-        TokenisationResult(tokens: tokens + other.tokens,
+        TokenizationResult(tokens: tokens + other.tokens,
                            identifiers: identifiers + other.identifiers,
                            integers: integers + other.integers,
                            decimals: decimals + other.decimals,
@@ -39,7 +42,7 @@ public struct TokenisationResult: CustomStringConvertible {
         var iterator = tokens.makeIterator()
         while let token = iterator.next() {
 
-            switch token {
+            switch token.kind {
             case .terminal(.closingSquareBracket): stringValues.append("]\n")
             case .terminal(.openingCurlyBraces): stringValues.append("{\n")
             case .terminal(.semicolon): stringValues.append(";\n")
@@ -83,47 +86,51 @@ public enum Tokenizer {
     /// Tokenize all `.webidl` files in the given directory
     /// - Parameter directoryURL: An URL to a directory that contains `.webidl` files
     /// - Throws: Any error related to the file operations or the tokenization operation.
-    /// - Returns: A `TokenisationResult` instance containing the token stream for the given files.
-    public static func tokenize(filesInDirectoryAt directoryURL: URL) throws -> TokenisationResult? {
+    /// - Returns: A `TokenizationResult` instance containing the token stream for the given files.
+    public static func tokenize(filesInDirectoryAt directoryURL: URL) throws -> TokenizationResult? {
 
-        var tokenisationResult = TokenisationResult(tokens: [], identifiers: [], integers: [], decimals: [], strings: [], others: [])
+        var tokenizationResult = TokenizationResult(tokens: [], identifiers: [], integers: [], decimals: [], strings: [], others: [])
         let files = try FileManager.default.contentsOfDirectory(at: directoryURL,
                                                                 includingPropertiesForKeys: nil,
                                                                 options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants, .skipsPackageDescendants])
-        for file in files where file.pathExtension == "webidl" {
+        for file in files where file.pathExtension == "idl" {
 
             guard let result = try Tokenizer.tokenize(fileAt: file) else {
                 continue
             }
-            tokenisationResult = tokenisationResult.merging(result)
+            tokenizationResult = tokenizationResult.merging(result)
         }
-        return tokenisationResult
+        return tokenizationResult
     }
 
     /// Tokenize a single Web IDL file
     /// - Parameter fileURL: An URL to a file containing Web IDL definitions.
     /// - Throws: Any error related to the file operations or the tokenization operation.
-    /// - Returns: A `TokenisationResult` instance containing the token stream for the given file.
-    public static func tokenize(fileAt fileURL: URL) throws -> TokenisationResult? {
+    /// - Returns: A `TokenizationResult` instance containing the token stream for the given file.
+    public static func tokenize(fileAt fileURL: URL) throws -> TokenizationResult? {
 
         let fileData = try Data(contentsOf: fileURL)
         guard let string = String(data: fileData, encoding: .utf8) else {
             return nil
         }
-        return try tokenize(string, name: fileURL.lastPathComponent)
+        return try tokenize(string, filePath: fileURL.path)
     }
 
     // swiftlint:disable cyclomatic_complexity function_body_length
     /// Tokenize Web IDL definitions
     /// - Parameter string: A string containing Web IDL definitions.
+    /// - Parameter filePath: A path to the file containing Web IDL definitions.
     /// - Throws: Any error related to the file operations or the tokenization operation.
-    /// - Returns: A `TokenisationResult` instance containing the token stream for the given file.
-    public static func tokenize(_ string: String, name: String = "<unknown>") throws -> TokenisationResult {
+    /// - Returns: A `TokenizationResult` instance containing the token stream for the given file.
+    public static func tokenize(_ string: String, filePath: String = "<unknown>") throws -> TokenizationResult {
 
         var tokens = Tokens()
 
         var state = State.regular
         var buffer = ""
+        var tokenStartOffset = 0
+        var currentIndex = string.utf8.startIndex
+        var currentOffset = 0
 
         func reset() {
             state = .regular
@@ -136,12 +143,26 @@ public enum Tokenizer {
         var strings: [String] = []
         var others: [String] = []
 
+        func currentRange() -> SourceRange {
+            let converter = SourceLocationConverter(file: filePath, source: string)
+
+            return .init(
+                start: .init(offset: tokenStartOffset, converter: converter),
+                end: .init(offset: currentOffset, converter: converter)
+            )
+        }
+
+        func appendToken(_ kind: Token.Kind) {
+            tokens.append(.init(kind: kind, range: currentRange()))
+            tokenStartOffset = currentOffset + 1
+        }
+
         func appendIntegerLiteral() {
             defer { reset() }
             guard let integer = Int(buffer) else {
                 return
             }
-            tokens.append(.integer)
+            appendToken(.integer)
             integers.append(integer)
         }
 
@@ -150,7 +171,7 @@ public enum Tokenizer {
             guard let integer = Int(buffer, radix: 16) else {
                 return
             }
-            tokens.append(.integer)
+            appendToken(.integer)
             integers.append(integer)
         }
 
@@ -159,138 +180,147 @@ public enum Tokenizer {
             guard let double = Double(buffer) else {
                 return
             }
-            tokens.append(.decimal)
+            appendToken(.decimal)
             decimals.append(double)
         }
 
         func appendIdentifier() {
             if let symbol = Terminal(rawValue: buffer) {
-                tokens.append(.terminal(symbol))
+                appendToken(.terminal(symbol))
             } else if identifierRegex.match(buffer) {
-                tokens.append(.identifier)
+                appendToken(.identifier)
                 identifiers.append(buffer)
             } else if integerRegex.match(buffer), let integer = Int(buffer) ?? Int(buffer, radix: 16) {
-                tokens.append(.integer)
+                appendToken(.integer)
                 integers.append(integer)
             } else if decimalRegex.match(buffer), let double = Double(buffer) {
-                tokens.append(.decimal)
+                appendToken(.decimal)
                 decimals.append(double)
             } else if otherRegex.match(buffer) {
-                tokens.append(.other)
+                appendToken(.other)
                 others.append(buffer)
             } else {
-                print("[\(name)] Undefined sequence: \(buffer)")
+                print("[\(filePath):\(currentRange())] Undefined sequence: \(buffer)")
             }
             reset()
         }
 
-        for character in string {
+        while currentIndex < string.utf8.endIndex, let character = String(
+                decoding: [string.utf8[currentIndex]],
+                as: UTF8.self
+        ).first {
+            defer {
+                if currentOffset < string.utf8.count - 1 {
+                    currentOffset += 1
+                }
+                currentIndex = string.utf8.index(after: currentIndex)
+            }
 
             switch (state, character) {
             case (.identifier, "["):
                 appendIdentifier()
-                tokens.append(.terminal(.openingSquareBracket))
+                appendToken(.terminal(.openingSquareBracket))
 
             case (.regular, "["):
-                tokens.append(.terminal(.openingSquareBracket))
+                appendToken(.terminal(.openingSquareBracket))
 
             case (.identifier, "]"):
                 appendIdentifier()
                 fallthrough
 
             case (.regular, "]"):
-                tokens.append(.terminal(.closingSquareBracket))
+                appendToken(.terminal(.closingSquareBracket))
 
             case (.identifier, "("):
                 appendIdentifier()
                 fallthrough
 
             case (.regular, "("):
-                tokens.append(.terminal(.openingParenthesis))
+                appendToken(.terminal(.openingParenthesis))
 
             case (.identifier, ")"):
                 appendIdentifier()
-                tokens.append(.terminal(.closingParenthesis))
+                appendToken(.terminal(.closingParenthesis))
 
             case (.integerLiteral, ")"):
                 appendIntegerLiteral()
-                tokens.append(.terminal(.closingParenthesis))
+                appendToken(.terminal(.closingParenthesis))
 
             case (.hexLiteral, ")"):
                 appendHexLiteral()
-                tokens.append(.terminal(.closingParenthesis))
+                appendToken(.terminal(.closingParenthesis))
 
             case (.regular, ")"):
-                tokens.append(.terminal(.closingParenthesis))
+                appendToken(.terminal(.closingParenthesis))
 
             case (.identifier, "<"):
                 appendIdentifier()
-                tokens.append(.terminal(.openingAngleBracket))
+                appendToken(.terminal(.openingAngleBracket))
 
             case (.regular, "<"):
-                tokens.append(.terminal(.openingAngleBracket))
+                appendToken(.terminal(.openingAngleBracket))
 
             case (.identifier, ">"):
                 appendIdentifier()
-                tokens.append(.terminal(.closingAngleBracket))
+                appendToken(.terminal(.closingAngleBracket))
 
             case (.regular, ">"):
-                tokens.append(.terminal(.closingAngleBracket))
+                appendToken(.terminal(.closingAngleBracket))
 
             case (.identifier, "{"):
                 appendIdentifier()
-                tokens.append(.terminal(.openingCurlyBraces))
+                appendToken(.terminal(.openingCurlyBraces))
 
             case (.regular, "{"):
-                tokens.append(.terminal(.openingCurlyBraces))
+                appendToken(.terminal(.openingCurlyBraces))
 
             case (.identifier, "}"):
                 appendIdentifier()
-                tokens.append(.terminal(.closingCurlyBraces))
+                appendToken(.terminal(.closingCurlyBraces))
 
             case (.regular, "}"):
-                tokens.append(.terminal(.closingCurlyBraces))
+                appendToken(.terminal(.closingCurlyBraces))
 
             case (.identifier, "?"):
                 appendIdentifier()
-                tokens.append(.terminal(.questionMark))
+                appendToken(.terminal(.questionMark))
 
             case (.regular, "?"):
-                tokens.append(.terminal(.questionMark))
+                appendToken(.terminal(.questionMark))
 
             case (.identifier, "="):
                 appendIdentifier()
-                tokens.append(.terminal(.equalSign))
+                appendToken(.terminal(.equalSign))
 
             case (.regular, "="):
-                tokens.append(.terminal(.equalSign))
+                appendToken(.terminal(.equalSign))
 
             case (.identifier, ","):
                 appendIdentifier()
-                tokens.append(.terminal(.comma))
+                appendToken(.terminal(.comma))
 
             case (.integerLiteral, ","):
                 appendIntegerLiteral()
-                tokens.append(.terminal(.comma))
+                appendToken(.terminal(.comma))
 
             case (.hexLiteral, ","):
                 appendHexLiteral()
-                tokens.append(.terminal(.comma))
+                appendToken(.terminal(.comma))
 
             case (.decimalLiteral, ","):
                 appendDecimalLiteral()
-                tokens.append(.terminal(.comma))
+                appendToken(.terminal(.comma))
 
             case (.regular, ","):
-                tokens.append(.terminal(.comma))
+                appendToken(.terminal(.comma))
 
             case (.identifier, ";"):
                 appendIdentifier()
-                tokens.append(.terminal(.semicolon))
+                appendToken(.terminal(.semicolon))
 
             case (.integerLiteral, ";"):
                 appendIntegerLiteral()
-                tokens.append(.terminal(.semicolon))
+                appendToken(.terminal(.semicolon))
 
             case (.integerLiteral, "."):
                 state = .decimalLiteral
@@ -298,25 +328,25 @@ public enum Tokenizer {
 
             case (.hexLiteral, ";"):
                 appendHexLiteral()
-                tokens.append(.terminal(.semicolon))
+                appendToken(.terminal(.semicolon))
 
             case (.decimalLiteral, ";"):
                 appendDecimalLiteral()
-                tokens.append(.terminal(.semicolon))
+                appendToken(.terminal(.semicolon))
 
             case (.regular, ";"):
-                tokens.append(.terminal(.semicolon))
+                appendToken(.terminal(.semicolon))
 
             case (.identifier, ":"):
                 appendIdentifier()
-                tokens.append(.terminal(.colon))
+                appendToken(.terminal(.colon))
 
             case (.identifier, "."):
                 appendIdentifier()
                 state = .startOfEllipsis
 
             case (.regular, ":"):
-                tokens.append(.terminal(.colon))
+                appendToken(.terminal(.colon))
 
             case (.regular, "."):
                 state = .startOfEllipsis
@@ -325,16 +355,16 @@ public enum Tokenizer {
                 state = .ellipsis
 
             case (.startOfEllipsis, let char) where char.isWhitespace || char.isNewline:
-                tokens.append(.terminal(.dot))
+                appendToken(.terminal(.dot))
                 reset()
 
             case (.ellipsis, "."):
-                tokens.append(.terminal(.ellipsis))
+                appendToken(.terminal(.ellipsis))
                 reset()
 
             case (.ellipsis, let char) where char.isWhitespace || char.isNewline:
-                tokens.append(.terminal(.dot))
-                tokens.append(.terminal(.dot))
+                appendToken(.terminal(.dot))
+                appendToken(.terminal(.dot))
                 reset()
 
             case (.integerLiteral, let char) where buffer.count == 1 && char.lowercased() == "x":
@@ -384,7 +414,7 @@ public enum Tokenizer {
             case (.comment, let char):
                 if buffer.isEmpty, char.isWhitespace { continue }
                 if char.isNewline {
-                    tokens.append(.comment(buffer))
+                    appendToken(.comment(buffer))
                     reset()
                     continue
                 }
@@ -398,7 +428,7 @@ public enum Tokenizer {
                 state = .maybeEndOfMultilineComment
 
             case (.maybeEndOfMultilineComment, "/"):
-                tokens.append(.multilineComment(buffer))
+                appendToken(.multilineComment(buffer))
                 reset()
 
             case (.maybeEndOfMultilineComment, "*"):
@@ -433,7 +463,7 @@ public enum Tokenizer {
                 state = .stringLiteral
 
             case (.stringLiteral, "\""):
-                tokens.append(.string)
+                appendToken(.string)
                 strings.append(buffer)
                 reset()
 
@@ -441,6 +471,7 @@ public enum Tokenizer {
                 buffer.append(char)
 
             default:
+                tokenStartOffset += 1
                 continue
             }
         }
@@ -461,18 +492,19 @@ public enum Tokenizer {
         case .escapedChar:
             break
         case .comment:
-            tokens.append(.comment(buffer))
+            appendToken(.comment(buffer))
         case .multilineComment:
-            tokens.append(.multilineComment(buffer))
+            appendToken(.multilineComment(buffer))
         case .startOfComment, .maybeEndOfMultilineComment:
             fatalError("Unterminated start of comment")
         case .startOfEllipsis:
-            tokens.append(.terminal(.dot))
+            appendToken(.terminal(.dot))
         case .ellipsis:
-            tokens.append(contentsOf: [.terminal(.dot), .terminal(.dot)])
+            appendToken(.terminal(.dot))
+            appendToken(.terminal(.dot))
         }
 
-        return TokenisationResult(tokens: tokens, identifiers: identifiers, integers: integers, decimals: decimals, strings: strings, others: others)
+        return TokenizationResult(tokens: tokens, identifiers: identifiers, integers: integers, decimals: decimals, strings: strings, others: others)
     }
     // swiftlint:enable cyclomatic_complexity function_body_length
 }

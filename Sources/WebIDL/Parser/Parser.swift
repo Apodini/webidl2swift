@@ -8,13 +8,13 @@ import Foundation
 /// `Parser` converts a token stream into a list of `Definion`.
 public class Parser {
 
-    public enum Error: Swift.Error {
+    public enum Error: Swift.Error, CustomStringConvertible {
 
         case unexpectedEndOfInput
         case unexpectedToken(Token)
-        case incorrectToken(expected: Token, got: Token)
+        case incorrectToken(expected: Token.Kind, got: Token)
 
-        var localizedDescription: String {
+        public var description: String {
 
             switch self {
 
@@ -37,10 +37,10 @@ public class Parser {
 
     /// Initialize a `Parser` instance
     /// - Parameter input: The token stream produced by `Tokenizer`.
-    public init(input: TokenisationResult) {
+    public init(input: TokenizationResult) {
         self.tokens = input.tokens.filter {
 
-            switch $0 {
+            switch $0.kind {
             case .comment, .multilineComment:
                 return false
             default:
@@ -54,9 +54,9 @@ public class Parser {
         self.others = input.others
     }
 
-    func expect(next: Token) throws {
+    func expect(next: Token.Kind) throws {
 
-        while case .comment = tokens.first {
+        while case .comment = tokens.first?.kind {
             print("Skipping comment")
             tokens.removeFirst()
         }
@@ -66,20 +66,20 @@ public class Parser {
             throw Error.unexpectedEndOfInput
         }
 
-        guard actual == next else {
+        guard actual.kind == next else {
             throw Error.incorrectToken(expected: next, got: actual)
         }
 
         tokens.removeFirst()
     }
 
-    func check(forNext next: Token) -> Bool {
+    func check(forNext next: Token.Kind) -> Bool {
 
         guard let nextCharacter = tokens.first else {
             return false
         }
 
-        guard nextCharacter == next else {
+        guard nextCharacter.kind == next else {
             return false
         }
         tokens.removeFirst()
@@ -98,7 +98,7 @@ public class Parser {
         throw Error.unexpectedToken(input)
     }
 
-    /// Parse the provided `TokenisationResult`
+    /// Parse the provided `TokenizationResult`
     /// - Throws: Any error related to parsing the token stream. See `Parser.Error`
     /// - Returns: A list of parsed definitions
     public func parse() throws -> [Definition] {
@@ -139,7 +139,8 @@ public class Parser {
          IncludesStatement
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .CallbackOrInterfaceOrMixin).contains(token):
             return try parseCallbackOrInterfaceOrMixin(extendedAttributeList: extendedAttributeList)
 
@@ -161,7 +162,7 @@ public class Parser {
         case let token where firstSet(for: .IncludesStatement).contains(token):
             return try parseIncludesStatement(extendedAttributeList: extendedAttributeList)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -198,7 +199,8 @@ public class Parser {
          unrestricted
          */
 
-        switch tokens.removeFirst() {
+        let token = tokens.removeFirst()
+        switch token.kind {
         case .terminal(.async): return .async
         case .terminal(.attribute): return .attribute
         case .terminal(.callback): return .callback
@@ -224,7 +226,7 @@ public class Parser {
         case .terminal(.stringifier): return .stringifier
         case .terminal(.typedef): return .typedef
         case .terminal(.unrestricted): return .unrestricted
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -237,14 +239,15 @@ public class Parser {
          callback CallbackRestOrInterface
          interface InterfaceOrMixin
          */
-        switch tokens.removeFirst() {
+        let token = tokens.removeFirst()
+        switch token.kind {
         case .terminal(.callback):
             return try parseCallbackRestOrInterface(extendedAttributeList: extendedAttributeList)
 
         case .terminal(.interface):
             return try parseInterfaceOrMixin(extendedAttributeList: extendedAttributeList)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -256,14 +259,15 @@ public class Parser {
          InterfaceRest
          MixinRest
          */
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .InterfaceRest).contains(token):
             return try parseInterfaceRest(extendedAttributeList: extendedAttributeList)
 
         case let token where firstSet(for: .MixinRest).contains(token):
             return try parseMixinRest(extendedAttributeList: extendedAttributeList)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -304,16 +308,18 @@ public class Parser {
 
         // Workaround for [Default] being tokenized to .nonTerminal(.Default) instead of .identifier
         let identifier: String
-        switch try unwrap(tokens.first) {
+        var token = try unwrap(tokens.first)
+        switch token.kind {
         case .identifier:
             tokens.removeFirst()
             identifier = identifiers.removeFirst()
 
-        case let token:
+        default:
             try unexpected(token)
         }
 
-        switch try unwrap(tokens.first) {
+        token = try unwrap(tokens.first)
+        switch token.kind {
         case .terminal(.openingParenthesis):
             return try parseExtendedAttributeArgList(withIdentifier: identifier)
 
@@ -323,7 +329,7 @@ public class Parser {
         case .terminal(.comma), .terminal(.closingSquareBracket):
             return try parseExtendedAttributeNoArgs(withIdentifier: identifier)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -352,14 +358,15 @@ public class Parser {
 
         try expect(next: .terminal(.equalSign))
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case .terminal(.openingParenthesis):
             return try parseExtendedAttributeIdentList(withIdentifier: identifier)
 
         case .identifier:
             return try parseExtendedAttributeIntermediateWithIdentifierPrefix(withIdentifier: identifier)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -368,7 +375,7 @@ public class Parser {
 
         let otherIdentifier = try parseIdentifier()
 
-        if case .terminal(.openingParenthesis) = try unwrap(tokens.first) {
+        if case .terminal(.openingParenthesis) = try unwrap(tokens.first).kind {
             return try parseExtendedAttributeNamedArgList(withIdentifier: identifier, otherIdentifier: otherIdentifier)
         } else {
             return try parseExtendedAttributeIdent(withIdentifier: identifier, otherIdentifier: otherIdentifier)
@@ -462,7 +469,8 @@ public class Parser {
          interface identifier { CallbackInterfaceMembers } ;
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .CallbackRest).contains(token):
             return try parseCallbackRest(extendedAttributeList: extendedAttributeList)
 
@@ -475,7 +483,7 @@ public class Parser {
             try expect(next: .terminal(.semicolon))
             return CallbackInterface(identifer: identifer, extendedAttributeList: extendedAttributeList, callbackInterfaceMembers: callbackInterfaceMembers)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -501,7 +509,8 @@ public class Parser {
          ε
          */
 
-        guard union(firstSet(for: .ExtendedAttributeList), firstSet(for: .CallbackInterfaceMember)).contains(try unwrap(tokens.first)) else {
+        let token = try unwrap(tokens.first)
+        guard union(firstSet(for: .ExtendedAttributeList), firstSet(for: .CallbackInterfaceMember)).contains(token.kind) else {
             return []
         }
         let extendedAttributeList = try parseExtendedAttributeList()
@@ -516,7 +525,8 @@ public class Parser {
          RegularOperation
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .Const).contains(token):
             let const = try parseConst()
             return .const(const, extendedAttributeList)
@@ -525,7 +535,7 @@ public class Parser {
             let regularOperation = try parseRegularOperation()
             return .regularOperation(regularOperation, extendedAttributeList)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -552,7 +562,8 @@ public class Parser {
          ExtendedAttributeList MixinMember MixinMembers
          ε
          */
-        guard union(firstSet(for: .ExtendedAttributeList), firstSet(for: .MixinMember)).contains(try unwrap(tokens.first)) else {
+        let token = try unwrap(tokens.first)
+        guard union(firstSet(for: .ExtendedAttributeList), firstSet(for: .MixinMember)).contains(token.kind) else {
             return []
         }
 
@@ -570,7 +581,8 @@ public class Parser {
          ReadOnly AttributeRest
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .Const).contains(token):
             return .const(try parseConst(), extendedAttributeList)
 
@@ -583,7 +595,7 @@ public class Parser {
         case let token where union(firstSet(for: .ReadOnly), firstSet(for: .AttributeRest)).contains(token):
             return .readOnlyAttributeRest(try parseReadOnly(), try parseAttributeRest(), extendedAttributeList)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -599,7 +611,8 @@ public class Parser {
 
     func parseInterfaceMembers() throws -> [InterfaceMember] {
 
-        guard union(firstSet(for: .ExtendedAttributeList), firstSet(for: .InterfaceMember)).contains(try unwrap(tokens.first)) else {
+        let token = try unwrap(tokens.first)
+        guard union(firstSet(for: .ExtendedAttributeList), firstSet(for: .InterfaceMember)).contains(token.kind) else {
             return []
         }
 
@@ -610,14 +623,15 @@ public class Parser {
 
     func parseInterfaceMember(extendedAttributeList: ExtendedAttributeList) throws -> InterfaceMember {
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .PartialInterfaceMember).contains(token):
             return try parsePartialInterfaceMember(extendedAttributeList: extendedAttributeList)
 
         case let token where firstSet(for: .Constructor).contains(token):
             return try parseConstructor(extendedAttributeList: extendedAttributeList)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -629,7 +643,8 @@ public class Parser {
          ε
          */
 
-        guard union(firstSet(for: .ExtendedAttributeList), firstSet(for: .PartialInterfaceMember)).contains(try unwrap(tokens.first)) else {
+        let token = try unwrap(tokens.first)
+        guard union(firstSet(for: .ExtendedAttributeList), firstSet(for: .PartialInterfaceMember)).contains(token.kind) else {
             return []
         }
         let extendedAttributeList = try parseExtendedAttributeList()
@@ -652,8 +667,8 @@ public class Parser {
          ReadWriteMaplike
          ReadWriteSetlike
          */
-
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .Const).contains(token):
             return .const(try parseConst(), extendedAttributeList)
 
@@ -684,7 +699,7 @@ public class Parser {
         case let token where firstSet(for: .ReadWriteSetlike).contains(token):
             return .readWriteSetlike(try parseReadWriteSetlike(), extendedAttributeList)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -698,7 +713,8 @@ public class Parser {
          SpecialOperation
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .RegularOperation).contains(token):
             let regularOperation = try parseRegularOperation()
             return .operation(.regular(regularOperation), extendedAttributeList)
@@ -707,7 +723,7 @@ public class Parser {
             let specialOperation = try parseSpecialOperation()
             return .operation(specialOperation, extendedAttributeList)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -745,7 +761,7 @@ public class Parser {
          */
 
         let next = try unwrap(tokens.first)
-        guard firstSet(for: .OperationName).contains(next) else {
+        guard firstSet(for: .OperationName).contains(next.kind) else {
             return nil
         }
         return try parseOperationName()
@@ -759,14 +775,15 @@ public class Parser {
          identifier
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .OperationNameKeyword).contains(token):
             return try parseOperationNameKeyword()
 
         case .identifier:
             return .identifier(try parseIdentifier())
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -798,7 +815,8 @@ public class Parser {
          setter
          deleter
          */
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case .terminal(.getter):
             tokens.removeFirst()
             return .getter
@@ -811,7 +829,7 @@ public class Parser {
             tokens.removeFirst()
             return .deleter
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -835,7 +853,8 @@ public class Parser {
          ;
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where union(firstSet(for: .ReadOnly), firstSet(for: .AttributeRest)).contains(token):
             let readOnly = try parseReadOnly()
             let attributeRest = try parseAttributeRest()
@@ -849,7 +868,7 @@ public class Parser {
             tokens.removeFirst()
             return .empty
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -886,14 +905,15 @@ public class Parser {
          identifier
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .AttributeNameKeyword).contains(token):
             return .attributeNameKeyword(try parseAttributeNameKeyword())
 
         case .identifier:
             return .identifier(try parseIdentifier())
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -906,7 +926,8 @@ public class Parser {
          required
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case .terminal(.async):
             tokens.removeFirst()
             return .async
@@ -915,7 +936,7 @@ public class Parser {
             tokens.removeFirst()
             return .required
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -937,14 +958,15 @@ public class Parser {
          RegularOperation
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where union(firstSet(for: .ReadOnly), firstSet(for: .AttributeRest)).contains(token):
             return .readOnlyAttributeRest(try parseReadOnly(), try parseAttributeRest())
 
         case let token where firstSet(for: .RegularOperation).contains(token):
             return .regularOperation(try parseRegularOperation())
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1021,7 +1043,8 @@ public class Parser {
          SetlikeRest
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .AttributeRest).contains(token):
             return .attribute(try parseAttributeRest())
 
@@ -1031,7 +1054,7 @@ public class Parser {
         case let token where firstSet(for: .SetlikeRest).contains(token):
             return .setlike(try parseSetlikeRest())
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1107,7 +1130,8 @@ public class Parser {
 
     func parseConstType() throws -> ConstType {
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .PrimitiveType).contains(token):
             return .primitiveType(try parsePrimitiveType())
 
@@ -1115,7 +1139,7 @@ public class Parser {
             try expect(next: .identifier)
             return .identifier(identifiers.removeFirst())
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1132,7 +1156,7 @@ public class Parser {
 
     func parseArgumentList() throws -> [Argument] {
 
-        guard try firstSet(for: .Argument).contains(unwrap(tokens.first)) else {
+        guard try firstSet(for: .Argument).contains(unwrap(tokens.first).kind) else {
             return []
         }
 
@@ -1165,7 +1189,8 @@ public class Parser {
          optional TypeWithExtendedAttributes ArgumentName Default
          Type Ellipsis ArgumentName
          */
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case .terminal(.optional):
             try expect(next: .terminal(.optional))
             let typeWithExtendedAttributes = try parseTypeWithExtendedAttributes()
@@ -1179,7 +1204,7 @@ public class Parser {
             let argumentName = try parseArgumentName()
             return .nonOptional(dataType, ellipsis, argumentName)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1191,14 +1216,15 @@ public class Parser {
          ArgumentNameKeyword
          identifier
          */
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .ArgumentNameKeyword).contains(token):
             return .argumentNameKeyword(try parseArgumentNameKeyword())
 
         case .identifier:
             return .identifier(try parseIdentifier())
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1233,7 +1259,8 @@ public class Parser {
          null
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case .string:
             try expect(next: .string)
             return .string(strings.removeFirst())
@@ -1255,14 +1282,15 @@ public class Parser {
         case let token where firstSet(for: .ConstValue).contains(token):
             return .constValue(try parseConstValue())
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
 
     func parseConstValue() throws -> ConstValue {
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .BooleanLiteral).contains(token):
             return .booleanLiteral(try parseBooleanLiteral())
 
@@ -1273,14 +1301,15 @@ public class Parser {
             try expect(next: .integer)
             return .integer(integers.removeFirst())
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
 
     func parseBooleanLiteral() throws -> Bool {
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case .terminal(.true):
             try expect(next: .terminal(.true))
             return true
@@ -1289,15 +1318,15 @@ public class Parser {
             try expect(next: .terminal(.false))
             return false
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
 
     func parseFloatLiteral() throws -> FloatLiteral {
 
-        switch try unwrap(tokens.first) {
-
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case .decimal:
             try expect(next: .decimal)
             return .decimal(decimals.removeFirst())
@@ -1314,7 +1343,7 @@ public class Parser {
             try expect(next: .terminal(.nan))
             return .notANumber
             
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1344,7 +1373,8 @@ public class Parser {
          ε
          */
 
-        guard union(firstSet(for: .ExtendedAttributeList), firstSet(for: .NamespaceMember)).contains(try unwrap(tokens.first)) else {
+        let token = try unwrap(tokens.first)
+        guard union(firstSet(for: .ExtendedAttributeList), firstSet(for: .NamespaceMember)).contains(token.kind) else {
             return []
         }
         let extendedAttributeList = try parseExtendedAttributeList()
@@ -1360,14 +1390,15 @@ public class Parser {
          readonly AttributeRest
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .RegularOperation).contains(token):
             return .regularOperation(try parseRegularOperation(), extendedAttributeList)
 
         case .terminal(.readonly):
             return .readonlyAttribute(try parseAttributeRest())
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1391,7 +1422,8 @@ public class Parser {
          PartialDictionary
          Namespace
          */
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case .terminal(.interface):
             try expect(next: .terminal(.interface))
             return try parsePartialInterfaceOrPartialMixin(extendedAttributeList: extendedAttributeList)
@@ -1402,7 +1434,7 @@ public class Parser {
         case let token where firstSet(for: .Namespace).contains(token):
             return .namespace(try parseNamespace(extendedAttributeList: []), extendedAttributeList)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1416,7 +1448,8 @@ public class Parser {
 
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .PartialInterfaceRest).contains(token):
             return try parsePartialInterfaceRest(extendedAttributeList: extendedAttributeList)
 
@@ -1425,7 +1458,7 @@ public class Parser {
             return .mixin(mixinRest, extendedAttributeList)
 
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1488,7 +1521,8 @@ public class Parser {
 
     func parseDictionaryMembers() throws -> [DictionaryMember] {
 
-        guard firstSet(for: .DictionaryMember).contains(try unwrap(tokens.first)) else {
+        let token = try unwrap(tokens.first)
+        guard firstSet(for: .DictionaryMember).contains(token.kind) else {
             return []
         }
 
@@ -1497,7 +1531,8 @@ public class Parser {
 
     func parseDictionaryMemberRest(extendedAttributeList: ExtendedAttributeList) throws -> DictionaryMember {
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case .terminal(.required):
             tokens.removeFirst()
             let typeWithExtendedAttributes = try parseTypeWithExtendedAttributes()
@@ -1522,7 +1557,7 @@ public class Parser {
                                     extendedAttributesOfDataType: nil,
                                     defaultValue: defaultValue)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1617,14 +1652,15 @@ public class Parser {
          UnionType Null
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .SingleType).contains(token):
             return .single(try parseSingleType())
 
         case let token where firstSet(for: .UnionType).contains(token):
             return .union(try parseUnionType(), try parseNull())
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1639,7 +1675,8 @@ public class Parser {
          PromiseType
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .DistinguishableType).contains(token):
             let distinguishableType = try parseDistinguishableType()
             return .distinguishableType(distinguishableType)
@@ -1652,7 +1689,7 @@ public class Parser {
             let promise = try parsePromiseType()
             return .promiseType(promise)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1681,7 +1718,8 @@ public class Parser {
          UnionType Null
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where union(firstSet(for: .ExtendedAttributeList), firstSet(for: .DistinguishableType)).contains(token):
             let extendedAttributeList = try parseExtendedAttributeList()
             let distinguishableType = try parseDistinguishableType()
@@ -1692,7 +1730,7 @@ public class Parser {
             let nullable = try parseNull()
             return .nullableUnionType(unionTypes, nullable)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1741,7 +1779,8 @@ public class Parser {
          RecordType Null
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .PrimitiveType).contains(token):
             let primitiveType = try parsePrimitiveType()
             let nullable = try parseNull()
@@ -1794,7 +1833,7 @@ public class Parser {
             let nullable = try parseNull()
             return .record(recordType, nullable)
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1811,7 +1850,8 @@ public class Parser {
          octet
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case let token where firstSet(for: .UnsignedIntegerType).contains(token):
             return .UnsignedIntegerType(try parseUnsignedIntegerType())
 
@@ -1834,7 +1874,7 @@ public class Parser {
             tokens.removeFirst()
             return .octet
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1859,7 +1899,8 @@ public class Parser {
          double
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case .terminal(.float):
             tokens.removeFirst()
             return .float
@@ -1868,7 +1909,7 @@ public class Parser {
             tokens.removeFirst()
             return .double
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1894,7 +1935,8 @@ public class Parser {
          long OptionalLong
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case .terminal(.long):
             tokens.removeFirst()
             if try parseOptionalLong() {
@@ -1907,7 +1949,7 @@ public class Parser {
             tokens.removeFirst()
             return .short
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -1929,7 +1971,8 @@ public class Parser {
          USVString
          */
 
-        switch try unwrap(tokens.first) {
+        let token = try unwrap(tokens.first)
+        switch token.kind {
         case .terminal(.ByteString):
             tokens.removeFirst()
             return .ByteString
@@ -1942,7 +1985,7 @@ public class Parser {
             tokens.removeFirst()
             return .USVString
 
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -2007,7 +2050,8 @@ public class Parser {
          Float64Array
          */
 
-        switch tokens.removeFirst() {
+        let token = tokens.removeFirst()
+        switch token.kind {
         case .terminal(.ArrayBuffer): return .ArrayBuffer
         case .terminal(.DataView): return .DataView
         case .terminal(.Int8Array): return .Int8Array
@@ -2019,7 +2063,7 @@ public class Parser {
         case .terminal(.Uint8ClampedArray): return .Uint8ClampedArray
         case .terminal(.Float32Array): return .Float32Array
         case .terminal(.Float64Array): return .Float64Array
-        case let token:
+        default:
             try unexpected(token)
         }
     }
@@ -2028,15 +2072,15 @@ public class Parser {
 
 // MARK: - First set
 
-func union(_ sets: Set<Token> ...) -> Set<Token> {
+func union(_ sets: Set<Token.Kind> ...) -> Set<Token.Kind> {
 
-    sets.reduce(Set<Token>()) {
+    sets.reduce(.init()) {
         $0.union($1)
     }
 }
 
 // swiftlint:disable cyclomatic_complexity function_body_length
-func firstSet(for symbol: NonTerminal) -> Set<Token> {
+func firstSet(for symbol: NonTerminal) -> Set<Token.Kind> {
 
     switch symbol {
     case .Definitions:
@@ -2474,7 +2518,7 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
         )
 
     case .PrimitiveType:
-        let terminals: Set<Token> = [
+        let terminals: Set<Token.Kind> = [
             .terminal(.void),
             .terminal(.undefined),
             .terminal(.boolean),
@@ -2552,7 +2596,7 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
         return [.terminal(.comma)]
 
     case .ExtendedAttribute:
-        let terminals: Set<Token> = [
+        let terminals: Set<Token.Kind> = [
             .terminal(.openingParenthesis),
             .terminal(.openingSquareBracket),
             .terminal(.openingCurlyBraces),
@@ -2566,7 +2610,7 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
         return firstSet(for: .ExtendedAttribute)
 
     case .ExtendedAttributeInner:
-        let terminals: Set<Token> = [
+        let terminals: Set<Token.Kind> = [
             .terminal(.openingParenthesis),
             .terminal(.openingSquareBracket),
             .terminal(.openingCurlyBraces),
@@ -2577,7 +2621,7 @@ func firstSet(for symbol: NonTerminal) -> Set<Token> {
         )
 
     case .Other:
-        let terminals: Set<Token> = [
+        let terminals: Set<Token.Kind> = [
             .identifier,
             .integer,
             .decimal,
