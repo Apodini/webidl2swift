@@ -8,13 +8,11 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-11
     steps:
     - uses: actions/checkout@v2
-      with:
-        swift-version: "5.3.0"
-    - name: Xcode 12.3
-      run: sudo xcode-select -s /Applications/Xcode_12.3.app/Contents/Developer
+    - name: Select Xcode 13.2.1
+      run: sudo xcode-select -s /Applications/Xcode_13.2.1.app/Contents/Developer
     - name: Xcode version check
       run: xcodebuild -version
     - name: Check version
