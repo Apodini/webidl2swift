@@ -5,7 +5,7 @@
 import XCTest
 import ArgumentParser
 import Commands
-@testable import webidl2swift
+@testable import Commands
 
 // swiftlint:disable:next type_name
 final class webidl2swiftTests: XCTestCase {
