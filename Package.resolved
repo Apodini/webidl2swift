@@ -6,17 +6,17 @@
         "repositoryURL": "https://github.com/apple/swift-argument-parser",
         "state": {
           "branch": null,
-          "revision": "92646c0cdbaca076c8d3d0207891785b3379cbff",
-          "version": "0.3.1"
+          "revision": "e1465042f195f374b94f915ba8ca49de24300a0d",
+          "version": "1.0.2"
         }
       },
       {
         "package": "swift-format",
         "repositoryURL": "https://github.com/apple/swift-format.git",
         "state": {
-          "branch": "swift-5.3-branch",
-          "revision": "12089179aa1668a2478b2b2111d98fa37f3531e3",
-          "version": null
+          "branch": null,
+          "revision": "f872223e16742fd97fabd319fbf4a939230cc796",
+          "version": "0.50500.0"
         }
       },
       {
@@ -24,8 +24,8 @@
         "repositoryURL": "https://github.com/apple/swift-syntax.git",
         "state": {
           "branch": null,
-          "revision": "844574d683f53d0737a9c6d706c3ef31ed2955eb",
-          "version": "0.50300.0"
+          "revision": "75e60475d9d8fd5bbc16a12e0eaa2cb01b0c322e",
+          "version": "0.50500.0"
         }
       }
     ]
