@@ -1,5 +1,6 @@
 dist
 node_modules
 WebAPI/*
-WebIDL-files
+WebIDL-files/*
+!WebIDL-files/.gitkeep
 !WebAPI/.gitkeep
