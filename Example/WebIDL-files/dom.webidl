@@ -1,4 +1,4 @@
-[Exposed=(Window,Worker,AudioWorklet)]
+[Exposed=*]
 interface Event {
   constructor(DOMString type, optional EventInit eventInitDict = {});
 
@@ -39,7 +39,7 @@ dictionary EventInit {
 partial interface Window {
   [Replaceable] readonly attribute (Event or undefined) event; // legacy
 };
-[Exposed=(Window,Worker)]
+[Exposed=*]
 interface CustomEvent : Event {
   constructor(DOMString type, optional CustomEventInit eventInitDict = {});
 
@@ -51,7 +51,7 @@ interface CustomEvent : Event {
 dictionary CustomEventInit : EventInit {
   any detail = null;
 };
-[Exposed=(Window,Worker,AudioWorklet)]
+[Exposed=*]
 interface EventTarget {
   constructor();
 
@@ -73,17 +73,22 @@ dictionary AddEventListenerOptions : EventListenerOptions {
   boolean once = false;
   AbortSignal signal;
 };
-[Exposed=(Window,Worker)]
+[Exposed=*]
 interface AbortController {
   constructor();
 
   [SameObject] readonly attribute AbortSignal signal;
 
-  undefined abort();
+  undefined abort(optional any reason);
 };
-[Exposed=(Window,Worker)]
+[Exposed=*]
 interface AbortSignal : EventTarget {
+  [NewObject] static AbortSignal abort(optional any reason);
+  [Exposed=(Window,Worker), NewObject] static AbortSignal timeout([EnforceRange] unsigned long long milliseconds);
+
   readonly attribute boolean aborted;
+  readonly attribute any reason;
+  undefined throwIfAborted();
 
   attribute EventHandler onabort;
 };interface mixin NonElementParentNode {
@@ -305,11 +310,14 @@ interface DocumentFragment : Node {
 [Exposed=Window]
 interface ShadowRoot : DocumentFragment {
   readonly attribute ShadowRootMode mode;
+  readonly attribute boolean delegatesFocus;
+  readonly attribute SlotAssignmentMode slotAssignment;
   readonly attribute Element host;
   attribute EventHandler onslotchange;
 };
 
 enum ShadowRootMode { "open", "closed" };
+enum SlotAssignmentMode { "manual", "named" };
 [Exposed=Window]
 interface Element : Node {
   readonly attribute DOMString? namespaceURI;
@@ -359,6 +367,7 @@ interface Element : Node {
 dictionary ShadowRootInit {
   required ShadowRootMode mode;
   boolean delegatesFocus = false;
+  SlotAssignmentMode slotAssignment = "named";
 };
 [Exposed=Window,
  LegacyUnenumerableNamedProperties]
@@ -576,7 +585,19 @@ interface XPathEvaluator {
 };
 
 XPathEvaluator includes XPathEvaluatorBase;
-[Exposed=(Window,Worker,AudioWorklet)]
+[Exposed=Window]
+interface XSLTProcessor {
+  constructor();
+  undefined importStylesheet(Node style);
+  [CEReactions] DocumentFragment transformToFragment(Node source, Document output);
+  [CEReactions] Document transformToDocument(Node source);
+  undefined setParameter([LegacyNullToEmptyString] DOMString namespaceURI, DOMString localName, any value);
+  any getParameter([LegacyNullToEmptyString] DOMString namespaceURI, DOMString localName);
+  undefined removeParameter([LegacyNullToEmptyString] DOMString namespaceURI, DOMString localName);
+  undefined clearParameters();
+  undefined reset();
+};
+[Exposed=*]
 interface Event {
   constructor(DOMString type, optional EventInit eventInitDict = {});
 
@@ -619,7 +640,7 @@ partial interface Window {
   [Replaceable] readonly attribute (Event or undefined) event; // legacy
 };
 
-[Exposed=(Window,Worker)]
+[Exposed=*]
 interface CustomEvent : Event {
   constructor(DOMString type, optional CustomEventInit eventInitDict = {});
 
@@ -632,7 +653,7 @@ dictionary CustomEventInit : EventInit {
   any detail = null;
 };
 
-[Exposed=(Window,Worker,AudioWorklet)]
+[Exposed=*]
 interface EventTarget {
   constructor();
 
@@ -655,18 +676,23 @@ dictionary AddEventListenerOptions : EventListenerOptions {
   AbortSignal signal;
 };
 
-[Exposed=(Window,Worker)]
+[Exposed=*]
 interface AbortController {
   constructor();
 
   [SameObject] readonly attribute AbortSignal signal;
 
-  undefined abort();
+  undefined abort(optional any reason);
 };
 
-[Exposed=(Window,Worker)]
+[Exposed=*]
 interface AbortSignal : EventTarget {
+  [NewObject] static AbortSignal abort(optional any reason);
+  [Exposed=(Window,Worker), NewObject] static AbortSignal timeout([EnforceRange] unsigned long long milliseconds);
+
   readonly attribute boolean aborted;
+  readonly attribute any reason;
+  undefined throwIfAborted();
 
   attribute EventHandler onabort;
 };
@@ -904,11 +930,14 @@ interface DocumentFragment : Node {
 [Exposed=Window]
 interface ShadowRoot : DocumentFragment {
   readonly attribute ShadowRootMode mode;
+  readonly attribute boolean delegatesFocus;
+  readonly attribute SlotAssignmentMode slotAssignment;
   readonly attribute Element host;
   attribute EventHandler onslotchange;
 };
 
 enum ShadowRootMode { "open", "closed" };
+enum SlotAssignmentMode { "manual", "named" };
 
 [Exposed=Window]
 interface Element : Node {
@@ -959,6 +988,7 @@ interface Element : Node {
 dictionary ShadowRootInit {
   required ShadowRootMode mode;
   boolean delegatesFocus = false;
+  SlotAssignmentMode slotAssignment = "named";
 };
 
 [Exposed=Window,
@@ -1194,4 +1224,17 @@ interface XPathEvaluator {
 };
 
 XPathEvaluator includes XPathEvaluatorBase;
+
+[Exposed=Window]
+interface XSLTProcessor {
+  constructor();
+  undefined importStylesheet(Node style);
+  [CEReactions] DocumentFragment transformToFragment(Node source, Document output);
+  [CEReactions] Document transformToDocument(Node source);
+  undefined setParameter([LegacyNullToEmptyString] DOMString namespaceURI, DOMString localName, any value);
+  any getParameter([LegacyNullToEmptyString] DOMString namespaceURI, DOMString localName);
+  undefined removeParameter([LegacyNullToEmptyString] DOMString namespaceURI, DOMString localName);
+  undefined clearParameters();
+  undefined reset();
+};
 
