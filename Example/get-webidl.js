@@ -7,7 +7,7 @@ fetch(`https://${process.argv[2]}.spec.whatwg.org`)
   .then(html => load(html))
   .then($ => $('.idl.def, pre code.idl').text())
   .then(idl => {
-    writeFileSync(`WebIDL-files/${process.argv[2]}.webidl`, idl)
+    writeFileSync(`WebIDL-files/${process.argv[2]}.idl`, idl)
     console.log(`Wrote ${idl.split('\n').length.toLocaleString()} lines!`)
   })
   .catch(err => console.error("Failed!", err))

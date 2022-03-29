@@ -83,8 +83,8 @@ public enum Tokenizer {
     static let otherRegex = try! NSRegularExpression(pattern: #"[^\t\n\r 0-9A-Za-z]"#)
     // swiftlint:enable force_try
 
-    /// Tokenize all `.webidl` files in the given directory
-    /// - Parameter directoryURL: An URL to a directory that contains `.webidl` files
+    /// Tokenize all `.idl` files in the given directory
+    /// - Parameter directoryURL: An URL to a directory that contains `.idl` files
     /// - Throws: Any error related to the file operations or the tokenization operation.
     /// - Returns: A `TokenizationResult` instance containing the token stream for the given files.
     public static func tokenize(filesInDirectoryAt directoryURL: URL) throws -> TokenizationResult? {
